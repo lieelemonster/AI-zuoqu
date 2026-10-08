@@ -11,7 +11,29 @@
 
 启动脚本先查终端里的工具；本机没有时会识别 Codex 已有的 bundled Node/Python/pnpm，仅改变脚本自身 PATH，不改系统配置。这里的系统 Python 3.9 不满足要求，脚本会使用已找到的 Python 3.12。换电脑时可正常安装运行要求中的工具。
 
-FluidSynth、FFmpeg、SF2 音源暂未安装，不影响脚手架启动。音频工具及模型密钥在后续任务中配置。当前无需付费服务账号。
+## 音频工具（FluidSynth、FFmpeg、钢琴音源）
+
+音乐渲染需要 FluidSynth、FFmpeg 和 SF2 钢琴音源。执行下面的命令会把它们装进项目内的 `tools/`（不修改系统、不需要管理员密码），并把路径写入 `.env` 中为空的 `FLUIDSYNTH_PATH`、`FFMPEG_PATH`、`SOUNDFONT_PATH`：
+
+```bash
+bash scripts/setup_audio.sh
+# 官方 conda 源连接不上时，可指定镜像：
+CONDA_CHANNEL=https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge bash scripts/setup_audio.sh
+```
+
+- FluidSynth、FFmpeg 来自 conda-forge，经 micromamba 安装到 `tools/env`；首次下载约数百 MB。
+- 钢琴音源使用 [GeneralUser GS](https://www.schristiancollins.com/generaluser)（作者允许用于个人或商业音乐创作），保存在 `tools/soundfonts/GeneralUser-GS.sf2`，主旋律与伴奏使用其中的原声钢琴音色。
+- 也可自行安装，把 `.env` 中三个路径改为本机绝对路径；相对路径以项目根目录为基准。
+
+检查音频环境：
+
+```bash
+bash scripts/dev.sh env-check
+```
+
+三项均显示 ✅ 且最后一行为“音频环境可用”时即可渲染；任一项缺失会显示 ❌ 和具体原因（未配置、文件不存在、不可执行或音源无法加载），命令退出码为 1。macOS 首次运行新装的 FFmpeg 可能需要十几秒。
+
+模型密钥在后续任务中配置。当前无需付费服务账号。
 
 ## 第一次安装
 
@@ -87,6 +109,7 @@ worker 当前只打印“Worker 脚手架可用，未接入任务处理。”然
 | `backend/app/schemas/` | 后续放数据结构和校验定义。 |
 | `backend/app/providers/`、`lyrics/` | 后续放模型适配与歌词生成处理。 |
 | `backend/app/planner/`、`composer/` | 后续放音乐规划与规则作曲。 |
+| `backend/app/rendering/environment.py` | 音频环境检查（`env-check`）。 |
 | `backend/app/rendering/`、`storage/` | 后续放音频渲染与 SQLite/文件存储。 |
 | `backend/app/worker.py` | 后台任务入口占位，当前不会执行任务。 |
 | `backend/config/`、`tests/` | 后续放预设、风格配置和必要检查。 |
@@ -94,6 +117,7 @@ worker 当前只打印“Worker 脚手架可用，未接入任务处理。”然
 | `backend/pyproject.toml` | Python 项目信息及版本要求。 |
 | `scripts/` | 安装、启动和检查脚本。 |
 | `runtime/`、`.venv/` | 运行产物预留目录与项目隔离的 Python 环境。 |
+| `tools/` | 项目内安装的 FluidSynth、FFmpeg 与钢琴音源，不提交。 |
 | `.env.example`、`.env` | 配置模板与本机配置，真实 `.env` 不提交。 |
 | `.gitignore` | 排除密钥、本地依赖、临时产物等。 |
 | `docs/`、`outputs/`、`work/` | 已有文档、交付副本和临时工作目录。 |

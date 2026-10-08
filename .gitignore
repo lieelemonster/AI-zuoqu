@@ -12,4 +12,5 @@ dist/
 runtime/*
 !runtime/.gitkeep
 work/
+tools/
 
