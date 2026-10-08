@@ -22,12 +22,13 @@ case "${1:-}" in
   check-schemas) run_backend_module app.schemas.check ;;
   check-presets) run_backend_module app.presets ;;
   check-midi) run_backend_module app.rendering.check_midi ;;
+  check-render) run_backend_module app.rendering.check_render ;;
   test)
     shift
     run_backend_module pytest -q "$@"
     ;;
   *)
-    echo "用法：bash scripts/dev.sh {api|web|worker|env-check|check-schemas|check-presets|check-midi|test}" >&2
+    echo "用法：bash scripts/dev.sh {api|web|worker|env-check|check-schemas|check-presets|check-midi|check-render|test}" >&2
     exit 1
     ;;
 esac
