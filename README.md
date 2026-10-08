@@ -156,7 +156,7 @@ check 执行类型检查、前端构建、Python 语法检查，不调用外部�
 |---|---|
 | `frontend/src/main.tsx`、`App.tsx` | 页面启动入口；创作页面的状态与流程。 |
 | `frontend/src/styles.css` | 页面样式。 |
-| `frontend/src/components/` | 创作表单、三版歌词展示、错误提示等组件。 |
+| `frontend/src/components/` | 创作表单、三版歌词选择与编辑、音乐进度与播放器、错误提示等组件。 |
 | `frontend/src/api/`、`types/` | 前端接口请求（统一错误处理）与数据类型。 |
 | `frontend/vite.config.ts` | Vite 配置，将 `/api` 转发到本地后端。 |
 | `frontend/package.json`、`tsconfig.json` | 前端依赖、运行命令与 TypeScript 检查。 |

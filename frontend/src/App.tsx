@@ -1,16 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { generateLyrics, getPresets } from './api/creative';
 import { getHealth } from './api/health';
-import { createMusicJob, newRequestId } from './api/music';
+import { ApiError } from './api/client';
+import { createMusicJob, getMusicJob, newRequestId } from './api/music';
 import CreativeForm from './components/CreativeForm';
 import ErrorNotice from './components/ErrorNotice';
 import LyricsEditor from './components/LyricsEditor';
 import LyricsVariants from './components/LyricsVariants';
+import MusicPanel from './components/MusicPanel';
 import type { CreativeInput, LyricVariant, MusicJobCreate, MusicJobView, Presets } from './types/api';
 
 type Connection = 'checking' | 'connected' | 'failed';
 
 const EMPTY_INPUT: CreativeInput = { themeId: '', emotionId: '', styleId: '', story: '' };
+
+function jobFailure(view: MusicJobView): ApiError {
+  return new ApiError({
+    code: view.errorCode ?? 'JOB_FAILED',
+    message: `音乐生成失败：${view.errorMessage ?? '未知原因'}`,
+    retryable: true,
+    fields: [],
+  }, 0);
+}
 
 export default function App() {
   const [connection, setConnection] = useState<Connection>('checking');
@@ -28,7 +39,50 @@ export default function App() {
   const [revision, setRevision] = useState(0);
   const [musicSubmitting, setMusicSubmitting] = useState(false);
   const [musicError, setMusicError] = useState<unknown>(null);
-  const [job, setJob] = useState<MusicJobView | null>(null);
+  const [pendingJob, setPendingJob] = useState<MusicJobView | null>(null);
+  const [slowJob, setSlowJob] = useState(false);
+  const [result, setResult] = useState<MusicJobView | null>(null);
+  const pendingJobId = pendingJob?.id ?? null;
+
+  useEffect(() => {
+    if (!pendingJobId) return;
+    let active = true;
+    let failures = 0;
+    let timer = 0;
+    const startedAt = Date.now();
+    const controller = new AbortController();
+    setSlowJob(false);
+    async function poll() {
+      try {
+        const view = await getMusicJob(pendingJobId!, controller.signal);
+        if (!active) return;
+        failures = 0;
+        if (view.status === 'succeeded') {
+          setResult(view);
+          setPendingJob(null);
+          return;
+        }
+        if (view.status === 'failed') {
+          setMusicError(jobFailure(view));
+          setPendingJob(null);
+          return;
+        }
+        setPendingJob(view);
+        setSlowJob(Date.now() - startedAt > 90_000);
+      } catch (error) {
+        if (!active) return;
+        failures += 1;
+        if (failures >= 5) {
+          setMusicError(error);
+          setPendingJob(null);
+          return;
+        }
+      }
+      timer = window.setTimeout(poll, 1000);
+    }
+    timer = window.setTimeout(poll, 500);
+    return () => { active = false; window.clearTimeout(timer); controller.abort(); };
+  }, [pendingJobId]);
 
   const loadPresets = useCallback((signal?: AbortSignal) => {
     setPresetsError(null);
@@ -103,7 +157,7 @@ export default function App() {
   }
 
   async function submitMusic() {
-    if (!selected || !draftText.trim() || musicSubmitting) return;
+    if (!selected || !draftText.trim() || musicSubmitting || pendingJob) return;
     const payload: MusicJobCreate = {
       requestId: newRequestId(),
       sourceRevision: revision,
@@ -114,7 +168,10 @@ export default function App() {
     setMusicSubmitting(true);
     setMusicError(null);
     try {
-      setJob(await createMusicJob(payload));
+      const view = await createMusicJob(payload);
+      if (view.status === 'succeeded') setResult(view);
+      else if (view.status === 'failed') setMusicError(jobFailure(view));
+      else setPendingJob(view);
     } catch (error) {
       setMusicError(error);
     } finally {
@@ -166,14 +223,19 @@ export default function App() {
               text={draftText}
               edited={editedIds.includes(selected.id)}
               switchedNotice={switchedNotice}
-              busy={musicSubmitting}
+              busy={musicSubmitting || pendingJob !== null}
               onChange={changeDraft}
               onReset={resetDraft}
               onGenerate={submitMusic}
             />
           )}
-          {musicError !== null && <ErrorNotice error={musicError} onRetry={musicSubmitting ? undefined : submitMusic} />}
-          {job && <p className="muted job-note" role="status">已提交音乐任务 {job.id}（状态：{job.status}）</p>}
+        </section>
+      )}
+
+      {(pendingJob || result || musicError !== null) && (
+        <section className="panel" aria-labelledby="music-title" aria-busy={pendingJob !== null}>
+          <h2 id="music-title"><span className="step">3</span>音乐小样</h2>
+          <MusicPanel pending={pendingJob} slow={slowJob} result={result} error={musicError} onRetry={submitMusic} />
         </section>
       )}
     </main>
