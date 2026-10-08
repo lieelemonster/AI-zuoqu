@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, Response
+from fastapi.responses import FileResponse
 
 from app.api.errors import AppError
 from app.composer.arrangement import LyricsLengthError, arrange
@@ -54,9 +57,39 @@ def create_music_job(request: MusicJobCreate, response: Response,
     return job_view(job)
 
 
-@router.get("/music-jobs/{job_id}", response_model=MusicJobView, tags=["music-jobs"])
-def get_music_job(job_id: str, store: JobStore = Depends(get_store)) -> MusicJobView:
+def _job_or_404(store: JobStore, job_id: str) -> GenerationJob:
     job = store.get(job_id)
     if job is None:
         raise AppError(404, "JOB_NOT_FOUND", "找不到该音乐任务")
-    return job_view(job)
+    return job
+
+
+@router.get("/music-jobs/{job_id}", response_model=MusicJobView, tags=["music-jobs"])
+def get_music_job(job_id: str, store: JobStore = Depends(get_store)) -> MusicJobView:
+    return job_view(_job_or_404(store, job_id))
+
+
+def audio_file(job: GenerationJob, root: Path) -> Path:
+    """试听与下载共用同一个 MP3；路径来自数据库，并限制在运行目录内。"""
+    if job.status != "succeeded":
+        raise AppError(409, "AUDIO_NOT_READY", "音乐尚未生成成功，暂无音频")
+    if job.audio_path is None:
+        raise AppError(410, "AUDIO_REMOVED", "该任务的音频已被清理，请重新生成")
+    path = (root / job.audio_path).resolve()
+    if not path.is_relative_to(root.resolve()) or not path.is_file():
+        raise AppError(410, "AUDIO_REMOVED", "该任务的音频文件不存在，请重新生成")
+    return path
+
+
+@router.get("/music-jobs/{job_id}/audio", tags=["music-jobs"], response_class=FileResponse)
+def get_audio(job_id: str, store: JobStore = Depends(get_store)) -> FileResponse:
+    path = audio_file(_job_or_404(store, job_id), store.path.parent)
+    return FileResponse(path, media_type="audio/mpeg", headers={"Cache-Control": "no-cache"})
+
+
+@router.get("/music-jobs/{job_id}/download", tags=["music-jobs"], response_class=FileResponse)
+def download_audio(job_id: str, store: JobStore = Depends(get_store)) -> FileResponse:
+    job = _job_or_404(store, job_id)
+    path = audio_file(job, store.path.parent)
+    filename = f"AI作曲小样-{job.created_at.astimezone():%Y%m%d-%H%M}.mp3"
+    return FileResponse(path, media_type="audio/mpeg", filename=filename)

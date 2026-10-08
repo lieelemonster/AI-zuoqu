@@ -56,6 +56,8 @@ MODEL_NAME=deepseek-chat
 | `POST /api/lyrics` | 提交 `{themeId, emotionId, styleId, story}`，返回故事叙述、情绪表达、意象表达三版歌词（均含主歌、副歌，篇幅适合约 1 分钟）。模型输出格式不符时自动重试一次。 |
 | `POST /api/music-jobs` | 提交 `{requestId, sourceRevision, input, lyrics, selectedVariantId}`，返回任务 ID 和状态（新任务为 `queued`）。提交时先检查歌词结构与时长；相同 `requestId` 重复提交返回同一任务。每个任务保存当次的歌词与输入快照及随机种子。 |
 | `GET /api/music-jobs/{id}` | 查询任务状态 `queued／running／succeeded／failed`、当前阶段、错误信息，成功后给出音频地址。 |
+| `GET /api/music-jobs/{id}/audio` | 播放 MP3，支持 Range 请求（浏览器拖动进度时只取对应片段）。 |
+| `GET /api/music-jobs/{id}/download` | 下载同一份 MP3（带下载响应头，文件名形如 `AI作曲小样-20261008-0218.mp3`）。任务未成功返回 409，文件已清理返回 410。 |
 
 接口出错时统一返回 `{"error": {"code", "message", "retryable", "fields"}}`：`retryable` 为 `true` 表示可以直接重试，`fields` 列出具体问题。后端启动后可打开 http://127.0.0.1:8000/docs 查看和试用接口。
 
