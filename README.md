@@ -44,6 +44,7 @@ bash scripts/dev.sh env-check
 | `bash scripts/dev.sh env-check` | FluidSynth、FFmpeg、钢琴音源是否可用。 |
 | `bash scripts/dev.sh check-schemas` | 示例乐谱与三版歌词通过校验；音高 128、时值 0、歌词不足三版被拒绝并指出字段。 |
 | `bash scripts/dev.sh check-presets` | 列出全部预设；七种风格的默认规划模板均可找到；未知风格被拒绝。 |
+| `bash scripts/dev.sh check-midi` | 中央 C、480 tick、120 BPM 导出 MIDI 后读回为一拍约 0.5 秒；旋律与伴奏是独立轨道。生成 `runtime/checks/middle_c.mid`。 |
 | `bash scripts/dev.sh test` | 全部自动测试（pytest）。 |
 
 ## 第一次安装
@@ -121,6 +122,7 @@ worker 当前只打印“Worker 脚手架可用，未接入任务处理。”然
 | `backend/app/providers/`、`lyrics/` | 后续放模型适配与歌词生成处理。 |
 | `backend/app/planner/`、`composer/` | 后续放音乐规划与规则作曲。 |
 | `backend/app/rendering/environment.py` | 音频环境检查（`env-check`）。 |
+| `backend/app/rendering/midi.py` | 乐谱 JSON 导出 MIDI 及读回。 |
 | `backend/app/rendering/`、`storage/` | 后续放音频渲染与 SQLite/文件存储。 |
 | `backend/app/worker.py` | 后台任务入口占位，当前不会执行任务。 |
 | `backend/config/`、`app/presets.py` | 预设、风格规则、默认规划及其加载校验。 |
