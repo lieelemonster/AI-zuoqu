@@ -33,7 +33,20 @@ bash scripts/dev.sh env-check
 
 三项均显示 ✅ 且最后一行为“音频环境可用”时即可渲染；任一项缺失会显示 ❌ 和具体原因（未配置、文件不存在、不可执行或音源无法加载），命令退出码为 1。macOS 首次运行新装的 FFmpeg 可能需要十几秒。
 
-模型密钥在后续任务中配置。当前无需付费服务账号。
+## 文本模型（歌词与音乐规划）
+
+后端通过 OpenAI 兼容的 Chat Completions 接口调用文本模型，DeepSeek、通义千问（兼容模式）、Kimi、智谱、OpenAI 等均可。在根目录 `.env` 中填写：
+
+```bash
+MODEL_PROVIDER=openai_compatible
+MODEL_API_URL=https://api.deepseek.com/v1   # 服务商提供的 OpenAI 兼容地址
+MODEL_API_KEY=你的密钥
+MODEL_NAME=deepseek-chat
+```
+
+密钥只保存在后端 `.env`（已被 `.gitignore` 排除），不会出现在前端代码、数据库、任务文件或接口响应中。没有密钥时可设置 `MODEL_PROVIDER=mock` 使用离线演示模型：它按固定模板返回示例歌词与默认规划，只用于走通流程；配置真实模型后，模型失败时会直接提示重试，不会改用演示内容。
+
+检查模型配置：`bash scripts/dev.sh check-model`。配置正确时“示例请求”会打印模型返回的结构化数据；同时会验证错误密钥和超时分别得到 `MODEL_AUTH_FAILED`、`MODEL_TIMEOUT`。
 
 ## 后端检查命令
 
@@ -51,6 +64,7 @@ bash scripts/dev.sh env-check
 | `bash scripts/dev.sh check-arrangement` | 24 小节 4/4 100 BPM 输出 57.6 秒乐谱（另计尾音）；短歌词每句后有停顿；过长歌词提示删减且不删词。 |
 | `bash scripts/dev.sh check-melody` | 同输入同种子得到相同音符、换种子不同；音符不越音域；副歌音区高于主歌；生成仅含主旋律的 `runtime/checks/melody_only.wav` 供试听。 |
 | `bash scripts/dev.sh check-demo` | 合成流行和说唱两版完整小样（`runtime/checks/demo_pop.mp3`、`demo_rap.mp3`）；检查伴奏与旋律对齐、旋律比伴奏响、结尾为主和弦自然衰减、时长合格。 |
+| `bash scripts/dev.sh check-model` | 文本模型示例请求返回结构化数据；错误密钥、超时得到明确错误；输出不含密钥。 |
 | `bash scripts/dev.sh test` | 全部自动测试（pytest）。 |
 
 ## 第一次安装
@@ -126,7 +140,7 @@ worker 当前只打印“Worker 脚手架可用，未接入任务处理。”然
 | `backend/app/settings.py` | 加载根目录 `.env`，统一管理配置。 |
 | `backend/app/schemas/` | 输入、歌词、音乐规划、乐谱与任务的数据格式及校验。 |
 | `backend/app/lyrics/parser.py` | 歌词段落标题识别、分句与字符映射。 |
-| `backend/app/providers/` | 后续放模型适配。 |
+| `backend/app/providers/` | 文本模型适配层（OpenAI 兼容接口、离线演示模型、错误转换）。 |
 | `backend/app/composer/arrangement.py`、`rhythm.py` | 段落时长分配与歌词节奏。 |
 | `backend/app/composer/harmony.py`、`melody.py`、`accompaniment.py`、`compose.py` | 和弦时间线、主旋律、和弦伴奏与作曲入口。 |
 | `backend/app/rendering/pipeline.py` | 乐谱 → MIDI → WAV → MP3 → 成品检查。 |

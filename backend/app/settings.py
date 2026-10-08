@@ -10,9 +10,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 class Settings(BaseSettings):
     app_name: str = "AI 写词与作曲"
     runtime_dir: Path = Path("runtime")
+    model_provider: str = "openai_compatible"
     model_api_url: str = ""
     model_api_key: str = ""
     model_name: str = ""
+    model_timeout_seconds: float = 60.0
+    model_json_mode: bool = True
     fluidsynth_path: str = ""
     ffmpeg_path: str = ""
     soundfont_path: str = ""
