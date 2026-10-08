@@ -18,13 +18,18 @@ function formatDuration(seconds: number | null): string {
 
 interface Props {
   pending: MusicJobView | null;
+  pendingOutdated: boolean;
   slow: boolean;
   result: MusicJobView | null;
+  resultOutdated: boolean;
   error: unknown;
-  onRetry: () => void;
+  canRegenerate: boolean;
+  onRegenerate: () => void;
 }
 
-export default function MusicPanel({ pending, slow, result, error, onRetry }: Props) {
+export default function MusicPanel({
+  pending, pendingOutdated, slow, result, resultOutdated, error, canRegenerate, onRegenerate,
+}: Props) {
   const current = pending ? STAGES.findIndex((s) => s.stage === pending.stage) : -1;
   return (
     <div className="music">
@@ -38,20 +43,29 @@ export default function MusicPanel({ pending, slow, result, error, onRetry }: Pr
               <li key={s.stage} className={index < current ? 'done' : index === current ? 'active' : ''}>{s.label}</li>
             ))}
           </ol>
+          {pendingOutdated && <p className="notice">正在生成的音乐基于修改前的内容，可以用当前内容重新生成。</p>}
           {slow && <p className="muted">生成时间比平时长，请确认 worker 已启动（bash scripts/dev.sh worker）。</p>}
         </div>
       )}
 
-      {error !== null && error !== undefined && <ErrorNotice error={error} onRetry={pending ? undefined : onRetry} />}
+      {error !== null && error !== undefined && (
+        <ErrorNotice error={error} onRetry={canRegenerate ? onRegenerate : undefined} />
+      )}
 
       {result?.audioUrl && (
         <div className="player">
+          {resultOutdated && <p className="notice" role="status">内容已修改，需重新生成音乐</p>}
           <audio key={result.id} controls preload="metadata" src={result.audioUrl}>
             你的浏览器不支持音频播放。
           </audio>
           <div className="player-actions">
             <span className="muted">时长 {formatDuration(result.durationSeconds)} · MP3</span>
-            {result.downloadUrl && <a className="secondary" href={result.downloadUrl} download>下载音频</a>}
+            <div className="player-buttons">
+              <button type="button" className="secondary" disabled={!canRegenerate} onClick={onRegenerate}>
+                重新生成
+              </button>
+              {result.downloadUrl && <a className="secondary" href={result.downloadUrl} download>下载音频</a>}
+            </div>
           </div>
         </div>
       )}

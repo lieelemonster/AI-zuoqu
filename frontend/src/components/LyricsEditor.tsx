@@ -8,13 +8,16 @@ interface Props {
   text: string;
   edited: boolean;
   switchedNotice: boolean;
-  busy: boolean;
+  canGenerate: boolean;
+  generateLabel: string;
   onChange: (text: string) => void;
   onReset: () => void;
   onGenerate: () => void;
 }
 
-export default function LyricsEditor({ variant, text, edited, switchedNotice, busy, onChange, onReset, onGenerate }: Props) {
+export default function LyricsEditor({
+  variant, text, edited, switchedNotice, canGenerate, generateLabel, onChange, onReset, onGenerate,
+}: Props) {
   const empty = text.trim().length === 0;
   const lines = text.split('\n').filter((line) => line.trim()).length;
   const name = `${APPROACH_LABELS[variant.approach]}${variant.title ? `《${variant.title}》` : ''}`;
@@ -34,8 +37,8 @@ export default function LyricsEditor({ variant, text, edited, switchedNotice, bu
       />
       <p className="editor-tip">保留 [主歌]、[副歌] 等段落标题，每行是一个乐句。共 {lines} 行，{text.length}/{LYRICS_MAX_LENGTH} 字。</p>
       <div className="actions">
-        <button type="button" className="primary" disabled={empty || busy} onClick={onGenerate}>
-          {busy ? '提交中…' : '生成音乐小样'}
+        <button type="button" className="primary" disabled={empty || !canGenerate} onClick={onGenerate}>
+          {generateLabel}
         </button>
         {empty && <span className="hint">歌词为空，无法生成音乐</span>}
       </div>
