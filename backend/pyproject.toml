@@ -1,0 +1,9 @@
+[project]
+name = "ai-music-backend"
+version = "0.1.0"
+description = "AI 写词与作曲本地开发脚手架"
+requires-python = ">=3.10"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100

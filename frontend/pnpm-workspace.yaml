@@ -1,0 +1,5 @@
+# pnpm 11 将构建脚本许可放在 workspace 配置中。
+allowBuilds:
+  esbuild: true
+# 安装与运行前的依赖检查使用同一个项目内仓库。
+storeDir: ../work/pnpm-store
