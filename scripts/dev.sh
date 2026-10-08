@@ -26,12 +26,13 @@ case "${1:-}" in
   check-encode) run_backend_module app.rendering.check_encode ;;
   check-lyrics) run_backend_module app.lyrics.check ;;
   check-arrangement) run_backend_module app.composer.check_arrangement ;;
+  check-melody) run_backend_module app.composer.check_melody ;;
   test)
     shift
     run_backend_module pytest -q "$@"
     ;;
   *)
-    echo "用法：bash scripts/dev.sh {api|web|worker|env-check|check-schemas|check-presets|check-midi|check-render|check-encode|check-lyrics|check-arrangement|test}" >&2
+    echo "用法：bash scripts/dev.sh {api|web|worker|env-check|check-schemas|check-presets|check-midi|check-render|check-encode|check-lyrics|check-arrangement|check-melody|test}" >&2
     exit 1
     ;;
 esac
