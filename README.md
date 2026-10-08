@@ -82,6 +82,7 @@ MODEL_NAME=deepseek-chat
 | `bash scripts/dev.sh jobs` | 列出 `runtime/app.db` 中最近 10 个任务的状态、种子、规划来源和歌词快照。 |
 | `bash scripts/dev.sh check-worker` | 在临时目录中验证：模拟渲染失败 → `failed`；处理中强制结束 worker，重启后遗留任务 → `failed`；新任务不覆盖上一次成功的音频。 |
 | `bash scripts/dev.sh check-plan` | AI 音乐规划：正常规划只引用已有模板；注入未知模板 ID 时修复一次，仍无效则使用默认规划，并打印内部记录。 |
+| `bash scripts/dev.sh check-styles` | 七种风格各生成一首短歌词小样到 `runtime/checks/styles/<风格ID>.mp3`，打印结构、时长、字音对应、副歌升高、节奏、旋律响度、结尾衰减等指标表。记录见 `docs/七种风格验证记录.md`。 |
 | `bash scripts/dev.sh test` | 全部自动测试（pytest）。 |
 
 ## 第一次安装

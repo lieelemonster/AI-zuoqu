@@ -44,8 +44,10 @@ def test_melody_rules_hold_for_every_style(style_id, emotion_id, lyrics):
     assert all(low <= n.pitch <= high for n in melody)
     assert all(n.lyric_line_id for n in melody if n.char_start is not None)
 
-    lyric_units = sum(len(l.units) for l in parse_lyrics(lyrics).lines)
-    assert sum(1 for n in melody if n.lyric_line_id) == lyric_units
+    units = {l.id: len(l.units) for l in parse_lyrics(lyrics).lines}
+    sung = sum(units[l.id.removesuffix("_repeat")] for l in score.lyric_lines)
+    assert sum(1 for n in melody if n.lyric_line_id) == sung
+    assert set(units) <= {l.id for l in score.lyric_lines}
 
     verse, chorus = pitches_of(score, "verse"), pitches_of(score, "chorus")
     assert mean(chorus) - mean(verse) >= 1.5 or max(chorus) - max(verse) >= 2

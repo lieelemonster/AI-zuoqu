@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from itertools import product
 
 from app.composer.rhythm import MAX_LINE_BARS, RhythmNote, line_rhythm, minimum_bars, natural_bars
@@ -21,6 +21,9 @@ STRETCH_PENALTY = {-1: 6.0, 0: 0.0, 1: 1.0, 2: 5.0, 3: 9.0}
 INTRO_OPTIONS = range(0, 5)
 OUTRO_OPTIONS = range(2, 5)
 GAP_OPTIONS = (0, 1, 2)
+# 歌词偏短时可在末尾再唱一遍副歌，比把每句拉得很长更像歌。
+REPEAT_OPTIONS = (0, 1)
+REPEAT_PENALTY = 2.5
 TARGET_TOLERANCE_SECONDS = 5.0
 SAFETY_MARGIN_SECONDS = 3.0
 
@@ -163,11 +166,20 @@ def arrange(parsed: ParsedLyrics, plan: MusicPlan, style: StyleConfig, compositi
     lyric_bars = {
         level: sum(sum(_line_bars(s.lines, r, level)) for s, _, r in lyric_sections) for level in STRETCH_LEVELS
     }
+    choruses = [item for item in lyric_sections if item[0].type == "chorus"]
+    repeat_source = choruses[-1] if choruses else None
+    repeat_bars = {
+        level: sum(_line_bars(repeat_source[0].lines, repeat_source[2], level)) if repeat_source else 0
+        for level in STRETCH_LEVELS
+    }
+    repeat_options = REPEAT_OPTIONS if repeat_source else (0,)
     low, high = style.bpm_range
     gap_slots = max(len(lyric_sections) - 1, 0)
     best, best_cost = None, float("inf")
-    for bpm, level, intro, outro, gap in product(range(low, high + 1), STRETCH_LEVELS, INTRO_OPTIONS, OUTRO_OPTIONS, GAP_OPTIONS):
-        bars = lyric_bars[level] + intro + outro + gap * gap_slots
+    for bpm, level, intro, outro, gap, repeat in product(
+        range(low, high + 1), STRETCH_LEVELS, INTRO_OPTIONS, OUTRO_OPTIONS, GAP_OPTIONS, repeat_options
+    ):
+        bars = lyric_bars[level] + intro + outro + gap * (gap_slots + repeat) + repeat_bars[level] * repeat
         seconds = bars * 240 / bpm + composition.tail_seconds
         if not composition.min_seconds <= seconds <= composition.max_seconds:
             continue
@@ -184,9 +196,10 @@ def arrange(parsed: ParsedLyrics, plan: MusicPlan, style: StyleConfig, compositi
             + abs(intro - preferred_intro) * 1.5
             + abs(outro - preferred_outro) * 1.5
             + gap * 3.0
+            + repeat * REPEAT_PENALTY
         )
         if cost < best_cost:
-            best, best_cost = (bpm, level, intro, outro, gap), cost
+            best, best_cost = (bpm, level, intro, outro, gap, repeat), cost
 
     if best is None:
         shortest = (lyric_bars[-1] + min(OUTRO_OPTIONS)) * 240 / high + composition.tail_seconds
@@ -202,7 +215,12 @@ def arrange(parsed: ParsedLyrics, plan: MusicPlan, style: StyleConfig, compositi
             f"歌词只有 {len(parsed.lines)} 行，拉长停顿后仍不足 {composition.min_seconds:g} 秒，请补充几句歌词",
         )
 
-    bpm, level, intro, outro, gap = best
+    bpm, level, intro, outro, gap, repeat = best
+    if repeat:
+        source, chord, rhythm = repeat_source
+        copy = replace(source, id=f"{source.id}_repeat",
+                       lines=[replace(line, id=f"{line.id}_repeat") for line in source.lines])
+        lyric_sections.append((copy, chord, rhythm))
     rng_seed = plan.seed
     sections: list[SectionPlan] = []
     bar = 0

@@ -29,6 +29,8 @@ BAR_FIGURES: dict[str, list[tuple[float, float, str]]] = {
     "stab": [(0, 1.5, "bass"), (1.5, 0.5, "bass"), (2.5, 1.5, "bass"),
              (0, 1, "chord"), (2.5, 1, "chord")],
 }
+# 音符密集的织体整体降低力度，否则总响度会盖过主旋律。
+FIGURE_VELOCITY = {"pulse": -14, "offbeat": -4}
 
 
 def _voicing(chord: Chord, floor: int) -> list[int]:
@@ -71,6 +73,7 @@ def _section_notes(section: SectionPlan, chords: list[Chord], floor: int, veloci
     notes = []
     figure = section.rhythm.accompaniment
     accent = 6 if section.type == "chorus" else (-4 if section.type in ("intro", "outro") else 0)
+    accent += FIGURE_VELOCITY.get(figure, 0)
     ending_start = section.end_tick - final_bars * TICKS_PER_BAR if final_bars else None
     for chord in chords:
         if ending_start is not None and chord.start_tick >= ending_start:

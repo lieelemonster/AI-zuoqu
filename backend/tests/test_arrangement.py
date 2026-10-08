@@ -58,6 +58,31 @@ def test_single_overlong_line_reported():
     assert info.value.code == "LINE_TOO_LONG"
 
 
+def test_fast_style_with_short_lyrics_repeats_chorus_with_same_melody():
+    from app.composer.compose import compose
+
+    parsed = parse_lyrics(STANDARD)
+    plan = default_plan("rock", "passionate", 11)
+    arrangement = arrange(parsed, plan, get_style("rock"), COMPOSITION)
+    types = [s.type for s in arrangement.sections]
+    assert types.count("chorus") == 2 and types[-2] == "chorus"
+    first, again = [s for s in arrangement.sections if s.type == "chorus"]
+    assert again.id == f"{first.id}_repeat"
+    assert [lp.line.text for lp in again.lines] == [lp.line.text for lp in first.lines]
+    assert max(lp.bars for s in arrangement.sections for lp in s.lines) <= 2
+
+    score = compose(parsed, plan, "rock", "passionate").score
+    melody = score.track("melody").notes
+    sung = lambda section_id: [n.pitch for n in melody
+                               if n.lyric_line_id in {l.id for l in score.lyric_lines if l.section_id == section_id}]
+    assert sung(first.id) == sung(again.id)
+
+
+def test_slow_style_does_not_repeat_when_lyrics_fill_the_time():
+    arrangement = arrange(parse_lyrics(STANDARD), default_plan("folk", "nostalgic", 1), get_style("folk"), COMPOSITION)
+    assert [s.type for s in arrangement.sections].count("chorus") == 1
+
+
 def test_same_input_same_rhythm():
     a = arrange(parse_lyrics(STANDARD), pop_plan(), get_style("pop"), COMPOSITION).skeleton_score()
     b = arrange(parse_lyrics(STANDARD), pop_plan(), get_style("pop"), COMPOSITION).skeleton_score()
