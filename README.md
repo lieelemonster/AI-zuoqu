@@ -48,6 +48,15 @@ MODEL_NAME=deepseek-chat
 
 检查模型配置：`bash scripts/dev.sh check-model`。配置正确时“示例请求”会打印模型返回的结构化数据；同时会验证错误密钥和超时分别得到 `MODEL_AUTH_FAILED`、`MODEL_TIMEOUT`。
 
+### 接口
+
+| 接口 | 说明 |
+| --- | --- |
+| `GET /api/health` | 健康检查。 |
+| `POST /api/lyrics` | 提交 `{themeId, emotionId, styleId, story}`，返回故事叙述、情绪表达、意象表达三版歌词（均含主歌、副歌，篇幅适合约 1 分钟）。模型输出格式不符时自动重试一次。 |
+
+接口出错时统一返回 `{"error": {"code", "message", "retryable", "fields"}}`：`retryable` 为 `true` 表示可以直接重试，`fields` 列出具体问题。后端启动后可打开 http://127.0.0.1:8000/docs 查看和试用接口。
+
 ## 后端检查命令
 
 从项目根目录执行：

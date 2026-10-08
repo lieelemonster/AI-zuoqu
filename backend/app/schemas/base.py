@@ -36,9 +36,13 @@ _MESSAGES = {
 
 def format_validation_error(exc: ValidationError) -> list[str]:
     """把 Pydantic 错误转成“字段路径：中文原因”，便于定位具体字段。"""
+    return format_error_list(exc.errors())
+
+
+def format_error_list(errors, skip_prefix: tuple[str, ...] = ()) -> list[str]:
     lines = []
-    for error in exc.errors():
-        path = ".".join(str(part) for part in error["loc"]) or "(整体)"
+    for error in errors:
+        path = ".".join(str(part) for part in error["loc"] if part not in skip_prefix) or "(整体)"
         template = _MESSAGES.get(error["type"])
         if template:
             message = template.format(**error.get("ctx", {}))
