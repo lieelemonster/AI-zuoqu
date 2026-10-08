@@ -11,7 +11,7 @@ from app.schemas.lyrics import LYRICS_MAX_LENGTH
 
 JobStatus = Literal["queued", "running", "succeeded", "failed"]
 JobStage = Literal["queued", "planning", "composing", "rendering", "encoding", "checking", "done"]
-PlanSource = Literal["ai", "default"]
+PlanSource = Literal["ai", "ai_repaired", "default"]
 
 
 class MusicJobCreate(ApiModel):

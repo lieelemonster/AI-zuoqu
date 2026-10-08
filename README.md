@@ -54,6 +54,8 @@ MODEL_NAME=deepseek-chat
 | --- | --- |
 | `GET /api/health` | 健康检查。 |
 | `POST /api/lyrics` | 提交 `{themeId, emotionId, styleId, story}`，返回故事叙述、情绪表达、意象表达三版歌词（均含主歌、副歌，篇幅适合约 1 分钟）。模型输出格式不符时自动重试一次。 |
+| `POST /api/music-jobs` | 提交 `{requestId, sourceRevision, input, lyrics, selectedVariantId}`，返回任务 ID 和状态（新任务为 `queued`）。提交时先检查歌词结构与时长；相同 `requestId` 重复提交返回同一任务。每个任务保存当次的歌词与输入快照及随机种子。 |
+| `GET /api/music-jobs/{id}` | 查询任务状态 `queued／running／succeeded／failed`、当前阶段、错误信息，成功后给出音频地址。 |
 
 接口出错时统一返回 `{"error": {"code", "message", "retryable", "fields"}}`：`retryable` 为 `true` 表示可以直接重试，`fields` 列出具体问题。后端启动后可打开 http://127.0.0.1:8000/docs 查看和试用接口。
 
@@ -74,6 +76,7 @@ MODEL_NAME=deepseek-chat
 | `bash scripts/dev.sh check-melody` | 同输入同种子得到相同音符、换种子不同；音符不越音域；副歌音区高于主歌；生成仅含主旋律的 `runtime/checks/melody_only.wav` 供试听。 |
 | `bash scripts/dev.sh check-demo` | 合成流行和说唱两版完整小样（`runtime/checks/demo_pop.mp3`、`demo_rap.mp3`）；检查伴奏与旋律对齐、旋律比伴奏响、结尾为主和弦自然衰减、时长合格。 |
 | `bash scripts/dev.sh check-model` | 文本模型示例请求返回结构化数据；错误密钥、超时得到明确错误；输出不含密钥。 |
+| `bash scripts/dev.sh jobs` | 列出 `runtime/app.db` 中最近 10 个任务的状态、种子、规划来源和歌词快照。 |
 | `bash scripts/dev.sh check-plan` | AI 音乐规划：正常规划只引用已有模板；注入未知模板 ID 时修复一次，仍无效则使用默认规划，并打印内部记录。 |
 | `bash scripts/dev.sh test` | 全部自动测试（pytest）。 |
 
@@ -159,7 +162,8 @@ worker 当前只打印“Worker 脚手架可用，未接入任务处理。”然
 | `backend/app/rendering/midi.py` | 乐谱 JSON 导出 MIDI 及读回。 |
 | `backend/app/rendering/audio.py` | FluidSynth 渲染 WAV、裁剪尾部静音、峰值检查。 |
 | `backend/app/rendering/encode.py` | WAV 转 MP3（按峰值统一响度）与成品检查。 |
-| `backend/app/rendering/`、`storage/` | 后续放音频渲染与 SQLite/文件存储。 |
+| `backend/app/rendering/` | MIDI 导出、WAV 渲染、MP3 编码与成品检查。 |
+| `backend/app/storage/` | SQLite 任务存储（`runtime/app.db`）。 |
 | `backend/app/worker.py` | 后台任务入口占位，当前不会执行任务。 |
 | `backend/config/`、`app/presets.py` | 预设、风格规则、默认规划及其加载校验。 |
 | `backend/tests/` | 自动测试与示例数据。 |
