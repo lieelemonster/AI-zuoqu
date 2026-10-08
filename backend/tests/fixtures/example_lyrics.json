@@ -1,0 +1,7 @@
+{
+  "variants": [
+    {"id": "v_story", "approach": "story", "title": "夏夜", "text": "[主歌]\n那年夏夜我们骑车穿过小巷\n[副歌]\n一起向前走"},
+    {"id": "v_emotion", "approach": "emotion", "title": "心跳", "text": "[主歌]\n心里装满说不出的期待\n[副歌]\n一起向前走"},
+    {"id": "v_imagery", "approach": "imagery", "title": "萤火", "text": "[主歌]\n萤火落在稻田的尽头\n[副歌]\n一起向前走"}
+  ]
+}

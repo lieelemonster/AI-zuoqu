@@ -22,8 +22,19 @@ case "${1:-}" in
     cd "$PROJECT_ROOT/backend"
     exec "$PROJECT_ROOT/.venv/bin/python" -m app.rendering.environment
     ;;
+  test)
+    require_venv
+    cd "$PROJECT_ROOT/backend"
+    shift
+    exec "$PROJECT_ROOT/.venv/bin/python" -m pytest -q "$@"
+    ;;
+  check-schemas)
+    require_venv
+    cd "$PROJECT_ROOT/backend"
+    exec "$PROJECT_ROOT/.venv/bin/python" -m app.schemas.check
+    ;;
   *)
-    echo "用法：bash scripts/dev.sh {api|web|worker|env-check}" >&2
+    echo "用法：bash scripts/dev.sh {api|web|worker|env-check|test|check-schemas}" >&2
     exit 1
     ;;
 esac

@@ -35,6 +35,16 @@ bash scripts/dev.sh env-check
 
 模型密钥在后续任务中配置。当前无需付费服务账号。
 
+## 后端检查命令
+
+从项目根目录执行：
+
+| 命令 | 检查内容 |
+|---|---|
+| `bash scripts/dev.sh env-check` | FluidSynth、FFmpeg、钢琴音源是否可用。 |
+| `bash scripts/dev.sh check-schemas` | 示例乐谱与三版歌词通过校验；音高 128、时值 0、歌词不足三版被拒绝并指出字段。 |
+| `bash scripts/dev.sh test` | 全部自动测试（pytest）。 |
+
 ## 第一次安装
 
 在项目根目录执行：
@@ -106,7 +116,7 @@ worker 当前只打印“Worker 脚手架可用，未接入任务处理。”然
 | `frontend/pnpm-workspace.yaml` | pnpm 11 的依赖构建许可配置。 |
 | `backend/app/main.py`、`api/health.py` | FastAPI 入口与健康检查接口。 |
 | `backend/app/settings.py` | 加载根目录 `.env`，统一管理配置。 |
-| `backend/app/schemas/` | 后续放数据结构和校验定义。 |
+| `backend/app/schemas/` | 输入、歌词、音乐规划、乐谱与任务的数据格式及校验。 |
 | `backend/app/providers/`、`lyrics/` | 后续放模型适配与歌词生成处理。 |
 | `backend/app/planner/`、`composer/` | 后续放音乐规划与规则作曲。 |
 | `backend/app/rendering/environment.py` | 音频环境检查（`env-check`）。 |

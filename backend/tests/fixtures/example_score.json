@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "ppq": 480,
+  "bpm": 100,
+  "meter": [4, 4],
+  "key": "C",
+  "mode": "major",
+  "sections": [
+    {"id": "verse_1", "type": "verse", "startTick": 0, "durationTicks": 1920},
+    {"id": "chorus_1", "type": "chorus", "startTick": 1920, "durationTicks": 1920}
+  ],
+  "lyricLines": [
+    {"id": "line_1", "text": "夏夜的风", "sectionId": "verse_1"},
+    {"id": "line_2", "text": "一起向前走", "sectionId": "chorus_1"}
+  ],
+  "tracks": [
+    {
+      "role": "melody",
+      "program": 0,
+      "notes": [
+        {"pitch": 64, "startTick": 0, "durationTicks": 480, "velocity": 88, "lyricLineId": "line_1", "charStart": 0, "charEnd": 1},
+        {"pitch": 67, "startTick": 480, "durationTicks": 480, "velocity": 84, "lyricLineId": "line_1", "charStart": 1, "charEnd": 2},
+        {"pitch": 65, "startTick": 960, "durationTicks": 240, "velocity": 82, "lyricLineId": "line_1", "charStart": 2, "charEnd": 3},
+        {"pitch": 64, "startTick": 1200, "durationTicks": 480, "velocity": 84, "lyricLineId": "line_1", "charStart": 3, "charEnd": 4},
+        {"pitch": 72, "startTick": 1920, "durationTicks": 240, "velocity": 92, "lyricLineId": "line_2", "charStart": 0, "charEnd": 1},
+        {"pitch": 71, "startTick": 2160, "durationTicks": 240, "velocity": 88, "lyricLineId": "line_2", "charStart": 1, "charEnd": 2},
+        {"pitch": 69, "startTick": 2400, "durationTicks": 480, "velocity": 88, "lyricLineId": "line_2", "charStart": 2, "charEnd": 3},
+        {"pitch": 67, "startTick": 2880, "durationTicks": 240, "velocity": 86, "lyricLineId": "line_2", "charStart": 3, "charEnd": 4},
+        {"pitch": 72, "startTick": 3120, "durationTicks": 720, "velocity": 90, "lyricLineId": "line_2", "charStart": 4, "charEnd": 5}
+      ]
+    },
+    {
+      "role": "accompaniment",
+      "program": 0,
+      "notes": [
+        {"pitch": 48, "startTick": 0, "durationTicks": 1920, "velocity": 60},
+        {"pitch": 55, "startTick": 0, "durationTicks": 1920, "velocity": 52},
+        {"pitch": 60, "startTick": 0, "durationTicks": 1920, "velocity": 52},
+        {"pitch": 41, "startTick": 1920, "durationTicks": 960, "velocity": 60},
+        {"pitch": 53, "startTick": 1920, "durationTicks": 960, "velocity": 52},
+        {"pitch": 57, "startTick": 1920, "durationTicks": 960, "velocity": 52},
+        {"pitch": 43, "startTick": 2880, "durationTicks": 960, "velocity": 60},
+        {"pitch": 55, "startTick": 2880, "durationTicks": 960, "velocity": 52},
+        {"pitch": 59, "startTick": 2880, "durationTicks": 960, "velocity": 52}
+      ]
+    }
+  ]
+}
