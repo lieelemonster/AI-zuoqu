@@ -59,9 +59,12 @@ export async function requestJson<T>(url: string, options: RequestOptions = {}):
   }
   if (!response.ok) {
     if (isErrorBody(data)) throw new ApiError(data.error, response.status);
+    // 后端自身的错误都带统一错误体；没有错误体的 5xx 多为开发代理连不上后端。
     throw new ApiError({
       code: `HTTP_${response.status}`,
-      message: `服务暂时不可用（HTTP ${response.status}），请稍后重试`,
+      message: response.status >= 500
+        ? `无法连接后端或后端异常（HTTP ${response.status}），请确认后端已启动后重试`
+        : `请求失败（HTTP ${response.status}），请稍后重试`,
       retryable: response.status >= 500,
       fields: [],
     }, response.status);

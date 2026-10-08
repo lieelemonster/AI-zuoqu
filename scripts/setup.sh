@@ -37,4 +37,4 @@ else
     "$FRONTEND_PM" install --cache "$PROJECT_ROOT/work/npm-cache" --registry "$FRONTEND_REGISTRY"
   fi
 fi
-echo "依赖安装完成。分别运行 bash scripts/dev.sh api 和 bash scripts/dev.sh web。"
+echo "依赖安装完成。下一步：bash scripts/setup_audio.sh 安装音频工具，在 .env 配置文本模型，然后分别运行 bash scripts/dev.sh api、bash scripts/dev.sh worker、bash scripts/dev.sh web。"
