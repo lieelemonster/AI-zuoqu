@@ -43,6 +43,7 @@ bash scripts/dev.sh env-check
 |---|---|
 | `bash scripts/dev.sh env-check` | FluidSynth、FFmpeg、钢琴音源是否可用。 |
 | `bash scripts/dev.sh check-schemas` | 示例乐谱与三版歌词通过校验；音高 128、时值 0、歌词不足三版被拒绝并指出字段。 |
+| `bash scripts/dev.sh check-presets` | 列出全部预设；七种风格的默认规划模板均可找到；未知风格被拒绝。 |
 | `bash scripts/dev.sh test` | 全部自动测试（pytest）。 |
 
 ## 第一次安装
@@ -122,7 +123,8 @@ worker 当前只打印“Worker 脚手架可用，未接入任务处理。”然
 | `backend/app/rendering/environment.py` | 音频环境检查（`env-check`）。 |
 | `backend/app/rendering/`、`storage/` | 后续放音频渲染与 SQLite/文件存储。 |
 | `backend/app/worker.py` | 后台任务入口占位，当前不会执行任务。 |
-| `backend/config/`、`tests/` | 后续放预设、风格配置和必要检查。 |
+| `backend/config/`、`app/presets.py` | 预设、风格规则、默认规划及其加载校验。 |
+| `backend/tests/` | 自动测试与示例数据。 |
 | `backend/requirements.txt`、`requirements.lock.txt` | 直接依赖约束；锁文件在首次成功安装后生成。 |
 | `backend/pyproject.toml` | Python 项目信息及版本要求。 |
 | `scripts/` | 安装、启动和检查脚本。 |

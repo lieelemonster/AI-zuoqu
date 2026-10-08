@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "themes": [
+    {"id": "love", "name": "爱情"},
+    {"id": "friendship", "name": "友情"},
+    {"id": "family", "name": "亲情"},
+    {"id": "campus", "name": "青春校园"},
+    {"id": "dream", "name": "成长追梦"},
+    {"id": "healing", "name": "治愈鼓励"},
+    {"id": "memory", "name": "回忆怀念"},
+    {"id": "hometown", "name": "故乡"},
+    {"id": "travel", "name": "旅行"},
+    {"id": "daily", "name": "日常生活"}
+  ],
+  "emotions": [
+    {"id": "sweet", "name": "甜蜜"},
+    {"id": "happy", "name": "快乐"},
+    {"id": "sad", "name": "悲伤"},
+    {"id": "missing", "name": "思念"},
+    {"id": "warm", "name": "温暖"},
+    {"id": "relaxed", "name": "轻松"},
+    {"id": "lonely", "name": "孤独"},
+    {"id": "nostalgic", "name": "怀旧"},
+    {"id": "passionate", "name": "热血"},
+    {"id": "hopeful", "name": "充满希望"}
+  ],
+  "styles": [
+    {"id": "pop", "name": "流行"},
+    {"id": "folk", "name": "民谣"},
+    {"id": "guofeng", "name": "国风"},
+    {"id": "rock", "name": "摇滚"},
+    {"id": "rnb", "name": "R&B"},
+    {"id": "electronic", "name": "电子"},
+    {"id": "rap", "name": "说唱"}
+  ]
+}

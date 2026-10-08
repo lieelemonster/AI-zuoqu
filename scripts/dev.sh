@@ -1,40 +1,32 @@
 #!/usr/bin/env bash
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+
+run_backend_module() {
+  require_venv
+  cd "$PROJECT_ROOT/backend"
+  exec "$PROJECT_ROOT/.venv/bin/python" -m "$@"
+}
+
 case "${1:-}" in
   api)
-    require_venv
-    cd "$PROJECT_ROOT/backend"
-    exec "$PROJECT_ROOT/.venv/bin/python" -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+    run_backend_module uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
     ;;
   web)
     require_frontend
     cd "$PROJECT_ROOT/frontend"
     exec "$FRONTEND_PM" run dev
     ;;
-  worker)
-    require_venv
-    cd "$PROJECT_ROOT/backend"
-    exec "$PROJECT_ROOT/.venv/bin/python" -m app.worker
-    ;;
-  env-check)
-    require_venv
-    cd "$PROJECT_ROOT/backend"
-    exec "$PROJECT_ROOT/.venv/bin/python" -m app.rendering.environment
-    ;;
+  worker) run_backend_module app.worker ;;
+  env-check) run_backend_module app.rendering.environment ;;
+  check-schemas) run_backend_module app.schemas.check ;;
+  check-presets) run_backend_module app.presets ;;
   test)
-    require_venv
-    cd "$PROJECT_ROOT/backend"
     shift
-    exec "$PROJECT_ROOT/.venv/bin/python" -m pytest -q "$@"
-    ;;
-  check-schemas)
-    require_venv
-    cd "$PROJECT_ROOT/backend"
-    exec "$PROJECT_ROOT/.venv/bin/python" -m app.schemas.check
+    run_backend_module pytest -q "$@"
     ;;
   *)
-    echo "用法：bash scripts/dev.sh {api|web|worker|env-check|test|check-schemas}" >&2
+    echo "用法：bash scripts/dev.sh {api|web|worker|env-check|check-schemas|check-presets|test}" >&2
     exit 1
     ;;
 esac
