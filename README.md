@@ -135,7 +135,7 @@ bash scripts/check.sh
 bash scripts/dev.sh worker
 ```
 
-worker 当前只打印“Worker 脚手架可用，未接入任务处理。”然后退出，这是预期行为。check 执行类型检查、前端构建、Python 语法检查，不调用外部模型。`build` 不代替启动命令；当前代理由 Vite 开发服务提供。
+worker 是单独的后台进程：每秒检查一次排队任务，依次完成音乐规划、作曲、渲染 WAV、编码 MP3 与成品检查，文件写入 `runtime/jobs/<任务ID>/`，按 Ctrl+C 退出；`bash scripts/dev.sh worker --once` 只处理一个任务后退出。worker 与网页接口分开运行，渲染时接口仍可正常响应。check 执行类型检查、前端构建、Python 语法检查，不调用外部模型。`build` 不代替启动命令；当前代理由 Vite 开发服务提供。
 
 ## 目录说明
 
@@ -164,7 +164,7 @@ worker 当前只打印“Worker 脚手架可用，未接入任务处理。”然
 | `backend/app/rendering/encode.py` | WAV 转 MP3（按峰值统一响度）与成品检查。 |
 | `backend/app/rendering/` | MIDI 导出、WAV 渲染、MP3 编码与成品检查。 |
 | `backend/app/storage/` | SQLite 任务存储（`runtime/app.db`）。 |
-| `backend/app/worker.py` | 后台任务入口占位，当前不会执行任务。 |
+| `backend/app/worker.py` | 单个 worker：认领排队任务，串联规划、作曲、渲染与成品检查。 |
 | `backend/config/`、`app/presets.py` | 预设、风格规则、默认规划及其加载校验。 |
 | `backend/tests/` | 自动测试与示例数据。 |
 | `backend/requirements.txt`、`requirements.lock.txt` | 直接依赖约束；锁文件在首次成功安装后生成。 |

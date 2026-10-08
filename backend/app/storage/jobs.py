@@ -93,6 +93,41 @@ class JobStore:
             row = conn.execute("SELECT * FROM jobs WHERE request_id = ?", (request.request_id,)).fetchone()
         return self._job(row), created
 
+    def claim_next(self) -> GenerationJob | None:
+        """短事务认领最早的排队任务并标记为运行中。"""
+        with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = conn.execute(
+                    "SELECT id FROM jobs WHERE status = 'queued' ORDER BY created_at, rowid LIMIT 1").fetchone()
+                if row:
+                    conn.execute("UPDATE jobs SET status = 'running', stage = 'planning', started_at = ?"
+                                 " WHERE id = ? AND status = 'queued'", (now(), row["id"]))
+                conn.execute("COMMIT")
+            except BaseException:
+                conn.execute("ROLLBACK")
+                raise
+        return self.get(row["id"]) if row else None
+
+    def set_stage(self, job_id: str, stage: str) -> None:
+        self._update(job_id, stage=stage)
+
+    def record_plan(self, job_id: str, *, plan_source: str, model_id: str, prompt_version: str,
+                    plan_record: dict, composer_version: str, soundfont_version: str) -> None:
+        self._update(job_id, plan_source=plan_source, model_id=model_id, prompt_version=prompt_version,
+                     plan_record_json=json.dumps(plan_record, ensure_ascii=False),
+                     composer_version=composer_version, soundfont_version=soundfont_version)
+
+    def succeed(self, job_id: str, *, score_path: str, midi_path: str, audio_path: str,
+                duration_seconds: float) -> None:
+        self._update(job_id, status="succeeded", stage="done", score_path=score_path, midi_path=midi_path,
+                     audio_path=audio_path, duration_seconds=duration_seconds, finished_at=now())
+
+    def _update(self, job_id: str, **fields) -> None:
+        assignments = ", ".join(f"{name} = ?" for name in fields)
+        with self.connect() as conn:
+            conn.execute(f"UPDATE jobs SET {assignments} WHERE id = ?", (*fields.values(), job_id))
+
     def get(self, job_id: str) -> GenerationJob | None:
         with self.connect() as conn:
             row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
