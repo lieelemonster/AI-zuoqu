@@ -1,19 +1,24 @@
 """单个 worker 进程：认领排队任务，依次完成音乐规划、作曲、渲染、编码与成品检查。
 
-与网页接口分开运行，渲染时不影响接口响应。每个任务的文件放在 runtime/jobs/<任务ID>/。
+与网页接口分开运行，渲染时不影响接口响应。每个任务使用独立目录 runtime/jobs/<任务ID>/：
+先在其中的 work/ 生成，成品检查通过后才改名为最终 song.mp3，失败不会影响其他任务的音频。
 """
 
 from __future__ import annotations
 
 import argparse
 import logging
+import os
+import shutil
 import time
 from pathlib import Path
 
+from app.composer.arrangement import LyricsLengthError
 from app.composer.compose import COMPOSER_VERSION, compose
-from app.lyrics.parser import require_structure
+from app.lyrics.parser import LyricsStructureError, require_structure
 from app.planner.planner import PROMPT_VERSION, plan_music
 from app.providers import ProviderError, TextModelProvider, get_provider
+from app.rendering.audio import RenderError
 from app.rendering.pipeline import render_score
 from app.schemas.job import GenerationJob
 from app.settings import settings
@@ -21,6 +26,10 @@ from app.storage.jobs import JobStore, get_store, runtime_dir
 
 logger = logging.getLogger("worker")
 POLL_SECONDS = 1.0
+
+
+class AudioCheckError(Exception):
+    pass
 
 
 def job_directory(job_id: str) -> Path:
@@ -39,6 +48,18 @@ def _provider() -> TextModelProvider | None:
         return None
 
 
+def describe_error(exc: Exception) -> tuple[str, str]:
+    if isinstance(exc, RenderError):
+        return exc.code, exc.message
+    if isinstance(exc, LyricsStructureError):
+        return "LYRICS_STRUCTURE", "歌词结构不完整：" + "；".join(exc.errors)
+    if isinstance(exc, LyricsLengthError):
+        return exc.code, exc.message
+    if isinstance(exc, AudioCheckError):
+        return "AUDIO_CHECK_FAILED", f"生成的音频未通过检查：{exc}"
+    return "INTERNAL_ERROR", "生成过程中出现意外错误，请重新生成"
+
+
 def process_job(store: JobStore, job: GenerationJob, provider: TextModelProvider | None) -> None:
     started = time.monotonic()
     data = job.input_snapshot
@@ -53,15 +74,23 @@ def process_job(store: JobStore, job: GenerationJob, provider: TextModelProvider
     store.set_stage(job.id, "composing")
     composition = compose(parsed, plan, data.style_id, data.emotion_id)
 
-    result = render_score(composition.score, job_directory(job.id), name="song",
+    directory = job_directory(job.id)
+    work = directory / "work"
+    shutil.rmtree(work, ignore_errors=True)
+    result = render_score(composition.score, work, name="song",
                           on_stage=lambda stage: store.set_stage(job.id, stage))
-    audio = result.audio
-    if not audio.ok:
-        raise RuntimeError("成品检查未通过：" + "；".join(audio.errors))
-    store.succeed(job.id, score_path=_relative(result.score_path), midi_path=_relative(result.midi_path),
-                  audio_path=_relative(result.mp3_path),
-                  duration_seconds=round(audio.duration_seconds, 2))
-    logger.info("%s 完成：%.1f 秒 MP3，用时 %.1f 秒", job.id, audio.duration_seconds, time.monotonic() - started)
+    if not result.audio.ok:
+        raise AudioCheckError("；".join(result.audio.errors))
+
+    final = {}
+    for path in (result.score_path, result.midi_path, result.mp3_path):
+        final[path.suffix] = directory / path.name
+        os.replace(path, final[path.suffix])
+    shutil.rmtree(work, ignore_errors=True)
+    store.succeed(job.id, score_path=_relative(final[".json"]), midi_path=_relative(final[".mid"]),
+                  audio_path=_relative(final[".mp3"]), duration_seconds=round(result.audio.duration_seconds, 2))
+    logger.info("%s 完成：%.1f 秒 MP3，用时 %.1f 秒", job.id, result.audio.duration_seconds,
+                time.monotonic() - started)
 
 
 def run_once(store: JobStore, provider: TextModelProvider | None = None) -> GenerationJob | None:
@@ -69,8 +98,40 @@ def run_once(store: JobStore, provider: TextModelProvider | None = None) -> Gene
     if job is None:
         return None
     logger.info("开始处理 %s（风格 %s，种子 %d）", job.id, job.input_snapshot.style_id, job.seed)
-    process_job(store, job, provider if provider is not None else _provider())
+    try:
+        process_job(store, job, provider if provider is not None else _provider())
+    except Exception as exc:
+        code, message = describe_error(exc)
+        logger.error("%s 失败：[%s] %s", job.id, code, message, exc_info=code == "INTERNAL_ERROR")
+        store.fail(job.id, code, message)
+        _remove_work(job.id)
+    cleanup_old_jobs(store, settings.job_retention)
     return store.get(job.id)
+
+
+def cleanup_old_jobs(store: JobStore, keep: int) -> None:
+    """只保留最近 keep 个已结束任务的文件；keep≤0 表示不清理。"""
+    if keep <= 0:
+        return
+    for job_id in store.expired_jobs(keep):
+        directory = job_directory(job_id)
+        if directory.exists():
+            shutil.rmtree(directory, ignore_errors=True)
+            store.clear_files(job_id)
+            logger.info("已清理较早任务的文件：%s", job_id)
+
+
+def _remove_work(job_id: str) -> None:
+    directory = job_directory(job_id)
+    shutil.rmtree(directory / "work", ignore_errors=True)
+    if directory.is_dir() and not any(directory.iterdir()):
+        directory.rmdir()
+
+
+def recover(store: JobStore) -> None:
+    for job_id in store.fail_stale_running():
+        _remove_work(job_id)
+        logger.warning("%s 在上次运行中被中断，已标记为失败", job_id)
 
 
 def main() -> int:
@@ -80,6 +141,7 @@ def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s",
                         datefmt="%H:%M:%S")
     store = get_store()
+    recover(store)
     logger.info("worker 已启动，数据库 %s，每 %.0f 秒检查一次排队任务（Ctrl+C 退出）", store.path, POLL_SECONDS)
     try:
         while True:

@@ -77,6 +77,7 @@ MODEL_NAME=deepseek-chat
 | `bash scripts/dev.sh check-demo` | 合成流行和说唱两版完整小样（`runtime/checks/demo_pop.mp3`、`demo_rap.mp3`）；检查伴奏与旋律对齐、旋律比伴奏响、结尾为主和弦自然衰减、时长合格。 |
 | `bash scripts/dev.sh check-model` | 文本模型示例请求返回结构化数据；错误密钥、超时得到明确错误；输出不含密钥。 |
 | `bash scripts/dev.sh jobs` | 列出 `runtime/app.db` 中最近 10 个任务的状态、种子、规划来源和歌词快照。 |
+| `bash scripts/dev.sh check-worker` | 在临时目录中验证：模拟渲染失败 → `failed`；处理中强制结束 worker，重启后遗留任务 → `failed`；新任务不覆盖上一次成功的音频。 |
 | `bash scripts/dev.sh check-plan` | AI 音乐规划：正常规划只引用已有模板；注入未知模板 ID 时修复一次，仍无效则使用默认规划，并打印内部记录。 |
 | `bash scripts/dev.sh test` | 全部自动测试（pytest）。 |
 
@@ -135,7 +136,16 @@ bash scripts/check.sh
 bash scripts/dev.sh worker
 ```
 
-worker 是单独的后台进程：每秒检查一次排队任务，依次完成音乐规划、作曲、渲染 WAV、编码 MP3 与成品检查，文件写入 `runtime/jobs/<任务ID>/`，按 Ctrl+C 退出；`bash scripts/dev.sh worker --once` 只处理一个任务后退出。worker 与网页接口分开运行，渲染时接口仍可正常响应。check 执行类型检查、前端构建、Python 语法检查，不调用外部模型。`build` 不代替启动命令；当前代理由 Vite 开发服务提供。
+worker 是单独的后台进程：每秒检查一次排队任务，依次完成音乐规划、作曲、渲染 WAV、编码 MP3 与成品检查，文件写入 `runtime/jobs/<任务ID>/`，按 Ctrl+C 退出；`bash scripts/dev.sh worker --once` 只处理一个任务后退出。worker 与网页接口分开运行，渲染时接口仍可正常响应。
+
+任务失败与文件处理：
+
+- 任何一步出错（如渲染失败、成品检查不通过），任务记为 `failed` 并带错误码和中文说明，worker 继续处理下一个任务。
+- worker 启动时，会把上次异常退出时遗留的 `running` 任务标记为 `failed`（`WORKER_INTERRUPTED`），用户重新生成即可。
+- 每个任务先在 `runtime/jobs/<任务ID>/work/` 中生成，成品检查通过后才改名为同目录下的 `song.mp3`（另有 `song.mid`、`song.score.json`），WAV 删除；失败的任务不会产生或覆盖任何 `song.mp3`。
+- worker 只保留最近 `JOB_RETENTION`（默认 50）个已结束任务的文件，更早的自动删除。
+
+check 执行类型检查、前端构建、Python 语法检查，不调用外部模型。`build` 不代替启动命令；当前代理由 Vite 开发服务提供。
 
 ## 目录说明
 

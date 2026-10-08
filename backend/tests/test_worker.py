@@ -51,6 +51,87 @@ def test_worker_runs_plan_compose_render(store, tmp_path):
     assert store.plan_record(job.id)["source"] == "ai"
 
 
+def test_render_failure_marks_job_failed(store, tmp_path, monkeypatch):
+    monkeypatch.setattr(worker.settings, "fluidsynth_path", "/nonexistent/fluidsynth")
+    job, _ = store.create(request("req_fail_0001"))
+    done = worker.run_once(store, MockProvider())
+    assert done.status == "failed" and done.error_code == "FLUIDSYNTH_UNAVAILABLE" and done.finished_at
+    assert done.audio_path is None and not (tmp_path / "jobs" / job.id).exists()
+
+
+def test_unexpected_error_is_internal_error_and_worker_continues(store, monkeypatch):
+    store.create(request("req_fail_0002"))
+    store.create(request("req_fail_0003"))
+    monkeypatch.setattr(worker, "compose", lambda *a: (_ for _ in ()).throw(KeyError("boom")))
+    first = worker.run_once(store, MockProvider())
+    second = worker.run_once(store, MockProvider())
+    assert first.error_code == "INTERNAL_ERROR" and "boom" not in first.error_message
+    assert second.status == "failed"
+
+
+def test_bad_audio_check_fails_job(store, monkeypatch):
+    from app.rendering.encode import AudioCheck
+    from app.rendering.pipeline import RenderResult
+
+    def fake_render(score, directory, name, on_stage):
+        directory.mkdir(parents=True)
+        paths = [directory / f"{name}{s}" for s in (".score.json", ".mid", ".mp3")]
+        for p in paths:
+            p.write_bytes(b"x")
+        return RenderResult(paths[0], paths[1], None, paths[2], AudioCheck(paths[2], False, 20.0, 1, "mp3", ["时长过短"]))
+
+    monkeypatch.setattr(worker, "render_score", fake_render)
+    store.create(request("req_fail_0004"))
+    done = worker.run_once(store, MockProvider())
+    assert done.error_code == "AUDIO_CHECK_FAILED" and "时长过短" in done.error_message
+
+
+def test_restart_marks_stale_running_jobs_failed(store, tmp_path):
+    job, _ = store.create(request("req_stale_0001"))
+    queued, _ = store.create(request("req_stale_0002"))
+    store.claim_next()
+    (tmp_path / "jobs" / job.id / "work").mkdir(parents=True)
+    worker.recover(store)
+    stale = store.get(job.id)
+    assert stale.status == "failed" and stale.error_code == "WORKER_INTERRUPTED"
+    assert store.get(queued.id).status == "queued"
+    assert not (tmp_path / "jobs" / job.id).exists()
+
+
+def test_cleanup_keeps_recent_jobs(store, tmp_path):
+    ids = []
+    for i in range(4):
+        job, _ = store.create(request(f"req_keep_{i:04d}"))
+        store.claim_next()
+        (tmp_path / "jobs" / job.id).mkdir(parents=True)
+        (tmp_path / "jobs" / job.id / "song.mp3").write_bytes(b"x")
+        store.succeed(job.id, score_path="s", midi_path="m", audio_path=f"jobs/{job.id}/song.mp3",
+                      duration_seconds=60)
+        ids.append(job.id)
+    worker.cleanup_old_jobs(store, keep=2)
+    assert [(tmp_path / "jobs" / i).exists() for i in ids] == [False, False, True, True]
+    assert store.get(ids[0]).audio_path is None and store.get(ids[3]).audio_path
+
+
+@needs_audio
+def test_new_jobs_do_not_overwrite_previous_audio(store, tmp_path, monkeypatch):
+    store.create(request("req_keep_audio_1"))
+    first = worker.run_once(store, MockProvider())
+    before = (tmp_path / first.audio_path).read_bytes()
+    monkeypatch.setattr(worker.settings, "fluidsynth_path", "/nonexistent/fluidsynth")
+    store.create(request("req_keep_audio_2"))
+    assert worker.run_once(store, MockProvider()).status == "failed"
+    monkeypatch.undo()
+    monkeypatch.setattr(worker, "runtime_dir", lambda: tmp_path)
+    store.create(request("req_keep_audio_3"))
+    third = worker.run_once(store, MockProvider())
+    assert third.audio_path != first.audio_path
+    assert (tmp_path / first.audio_path).read_bytes() == before
+    assert not (tmp_path / "jobs" / third.id / "work").exists()
+    assert sorted(p.name for p in (tmp_path / "jobs" / third.id).iterdir()) == ["song.mid", "song.mp3",
+                                                                               "song.score.json"]
+
+
 @needs_audio
 def test_worker_without_model_uses_default_plan(store, monkeypatch):
     store.create(request("req_worker_0002", style="folk"))

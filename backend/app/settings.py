@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     fluidsynth_path: str = ""
     ffmpeg_path: str = ""
     soundfont_path: str = ""
+    job_retention: int = 50
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",

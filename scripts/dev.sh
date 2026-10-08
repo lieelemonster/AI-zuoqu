@@ -31,12 +31,13 @@ case "${1:-}" in
   check-model) run_backend_module app.providers.check ;;
   check-plan) run_backend_module app.planner.check ;;
   jobs) run_backend_module app.storage.jobs ;;
+  check-worker) run_backend_module app.check_worker ;;
   test)
     shift
     run_backend_module pytest -q "$@"
     ;;
   *)
-    echo "用法：bash scripts/dev.sh {api|web|worker|env-check|check-schemas|check-presets|check-midi|check-render|check-encode|check-lyrics|check-arrangement|check-melody|check-demo|check-model|check-plan|jobs|test}" >&2
+    echo "用法：bash scripts/dev.sh {api|web|worker|env-check|check-schemas|check-presets|check-midi|check-render|check-encode|check-lyrics|check-arrangement|check-melody|check-demo|check-model|check-plan|jobs|check-worker|test}" >&2
     exit 1
     ;;
 esac

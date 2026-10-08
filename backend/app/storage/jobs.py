@@ -123,6 +123,30 @@ class JobStore:
         self._update(job_id, status="succeeded", stage="done", score_path=score_path, midi_path=midi_path,
                      audio_path=audio_path, duration_seconds=duration_seconds, finished_at=now())
 
+    def fail(self, job_id: str, code: str, message: str) -> None:
+        self._update(job_id, status="failed", error_code=code, error_message=message, finished_at=now())
+
+    def fail_stale_running(self) -> list[str]:
+        """worker 启动时调用：上次异常退出遗留的运行中任务标记为失败，用户可重新生成。"""
+        with self.connect() as conn:
+            rows = conn.execute("SELECT id FROM jobs WHERE status = 'running'").fetchall()
+            conn.execute(
+                "UPDATE jobs SET status = 'failed', error_code = 'WORKER_INTERRUPTED',"
+                " error_message = '上次生成过程被中断，请重新生成', finished_at = ? WHERE status = 'running'",
+                (now(),))
+        return [r["id"] for r in rows]
+
+    def expired_jobs(self, keep: int) -> list[str]:
+        """按创建时间保留最近 keep 个已结束任务，返回更早的任务 ID。"""
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT id FROM jobs WHERE status IN ('succeeded', 'failed') ORDER BY created_at DESC, rowid DESC"
+                " LIMIT -1 OFFSET ?", (keep,)).fetchall()
+        return [r["id"] for r in rows]
+
+    def clear_files(self, job_id: str) -> None:
+        self._update(job_id, score_path=None, midi_path=None, audio_path=None)
+
     def _update(self, job_id: str, **fields) -> None:
         assignments = ", ".join(f"{name} = ?" for name in fields)
         with self.connect() as conn:

@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 def job_view(job: GenerationJob) -> MusicJobView:
-    ready = job.status == "succeeded"
+    ready = job.status == "succeeded" and job.audio_path is not None
     return MusicJobView(
         id=job.id,
         status=job.status,
