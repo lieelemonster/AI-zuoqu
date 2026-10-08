@@ -47,6 +47,7 @@ bash scripts/dev.sh env-check
 | `bash scripts/dev.sh check-midi` | 中央 C、480 tick、120 BPM 导出 MIDI 后读回为一拍约 0.5 秒；旋律与伴奏是独立轨道。生成 `runtime/checks/middle_c.mid`。 |
 | `bash scripts/dev.sh check-render` | 用钢琴音源把四小节旋律＋和弦渲染为 `runtime/checks/render_test.wav`，检查非空、无削顶；缺音源时返回错误。用 `open runtime/checks/render_test.wav` 试听。 |
 | `bash scripts/dev.sh check-encode` | 渲染约 60 秒和约 11 秒两个测试成品并转 MP3，报告时长；60 秒的通过，11 秒的因超出 45～75 秒不能标记成功。 |
+| `bash scripts/dev.sh check-lyrics` | 识别 `[主歌]\n夏夜的风\n[副歌]\n一起向前走` 的两个段落和歌词行；缺副歌标题时提示补齐，原文不变。 |
 | `bash scripts/dev.sh test` | 全部自动测试（pytest）。 |
 
 ## 第一次安装
@@ -121,7 +122,8 @@ worker 当前只打印“Worker 脚手架可用，未接入任务处理。”然
 | `backend/app/main.py`、`api/health.py` | FastAPI 入口与健康检查接口。 |
 | `backend/app/settings.py` | 加载根目录 `.env`，统一管理配置。 |
 | `backend/app/schemas/` | 输入、歌词、音乐规划、乐谱与任务的数据格式及校验。 |
-| `backend/app/providers/`、`lyrics/` | 后续放模型适配与歌词生成处理。 |
+| `backend/app/lyrics/parser.py` | 歌词段落标题识别、分句与字符映射。 |
+| `backend/app/providers/` | 后续放模型适配。 |
 | `backend/app/planner/`、`composer/` | 后续放音乐规划与规则作曲。 |
 | `backend/app/rendering/environment.py` | 音频环境检查（`env-check`）。 |
 | `backend/app/rendering/midi.py` | 乐谱 JSON 导出 MIDI 及读回。 |
