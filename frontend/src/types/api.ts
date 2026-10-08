@@ -31,6 +31,28 @@ export interface LyricsResponse {
   promptVersion: string;
 }
 
+export interface MusicJobCreate {
+  requestId: string;
+  sourceRevision: number;
+  input: CreativeInput;
+  lyrics: string;
+  selectedVariantId: string | null;
+}
+
+export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed';
+export type JobStage = 'queued' | 'planning' | 'composing' | 'rendering' | 'encoding' | 'checking' | 'done';
+
+export interface MusicJobView {
+  id: string;
+  status: JobStatus;
+  stage: JobStage;
+  errorCode: string | null;
+  errorMessage: string | null;
+  durationSeconds: number | null;
+  audioUrl: string | null;
+  downloadUrl: string | null;
+}
+
 export interface ApiErrorBody {
   code: string;
   message: string;
