@@ -53,6 +53,7 @@ MODEL_NAME=deepseek-chat
 | 接口 | 说明 |
 | --- | --- |
 | `GET /api/health` | 健康检查。 |
+| `GET /api/presets` | 主题、情绪、风格的 ID 与显示名称，前端据此显示选项。 |
 | `POST /api/lyrics` | 提交 `{themeId, emotionId, styleId, story}`，返回故事叙述、情绪表达、意象表达三版歌词（均含主歌、副歌，篇幅适合约 1 分钟）。模型输出格式不符时自动重试一次。 |
 | `POST /api/music-jobs` | 提交 `{requestId, sourceRevision, input, lyrics, selectedVariantId}`，返回任务 ID 和状态（新任务为 `queued`）。提交时先检查歌词结构与时长；相同 `requestId` 重复提交返回同一任务。每个任务保存当次的歌词与输入快照及随机种子。 |
 | `GET /api/music-jobs/{id}` | 查询任务状态 `queued／running／succeeded／failed`、当前阶段、错误信息，成功后给出音频地址。 |
@@ -153,10 +154,10 @@ check 执行类型检查、前端构建、Python 语法检查，不调用外部�
 
 | 路径 | 用途 |
 |---|---|
-| `frontend/src/main.tsx`、`App.tsx` | 页面启动入口与首页占位、连接状态。 |
-| `frontend/src/styles.css` | 首页基础样式。 |
-| `frontend/src/components/` | 后续放表单、编辑器和播放器组件。 |
-| `frontend/src/api/`、`types/` | 前端接口请求与数据类型。 |
+| `frontend/src/main.tsx`、`App.tsx` | 页面启动入口；创作页面的状态与流程。 |
+| `frontend/src/styles.css` | 页面样式。 |
+| `frontend/src/components/` | 创作表单、三版歌词展示、错误提示等组件。 |
+| `frontend/src/api/`、`types/` | 前端接口请求（统一错误处理）与数据类型。 |
 | `frontend/vite.config.ts` | Vite 配置，将 `/api` 转发到本地后端。 |
 | `frontend/package.json`、`tsconfig.json` | 前端依赖、运行命令与 TypeScript 检查。 |
 | `frontend/pnpm-lock.yaml` 或 `package-lock.json` | 前端首次成功安装后生成的依赖锁，保留一种。 |
