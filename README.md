@@ -46,6 +46,7 @@ bash scripts/dev.sh env-check
 | `bash scripts/dev.sh check-presets` | 列出全部预设；七种风格的默认规划模板均可找到；未知风格被拒绝。 |
 | `bash scripts/dev.sh check-midi` | 中央 C、480 tick、120 BPM 导出 MIDI 后读回为一拍约 0.5 秒；旋律与伴奏是独立轨道。生成 `runtime/checks/middle_c.mid`。 |
 | `bash scripts/dev.sh check-render` | 用钢琴音源把四小节旋律＋和弦渲染为 `runtime/checks/render_test.wav`，检查非空、无削顶；缺音源时返回错误。用 `open runtime/checks/render_test.wav` 试听。 |
+| `bash scripts/dev.sh check-encode` | 渲染约 60 秒和约 11 秒两个测试成品并转 MP3，报告时长；60 秒的通过，11 秒的因超出 45～75 秒不能标记成功。 |
 | `bash scripts/dev.sh test` | 全部自动测试（pytest）。 |
 
 ## 第一次安装
@@ -125,6 +126,7 @@ worker 当前只打印“Worker 脚手架可用，未接入任务处理。”然
 | `backend/app/rendering/environment.py` | 音频环境检查（`env-check`）。 |
 | `backend/app/rendering/midi.py` | 乐谱 JSON 导出 MIDI 及读回。 |
 | `backend/app/rendering/audio.py` | FluidSynth 渲染 WAV、裁剪尾部静音、峰值检查。 |
+| `backend/app/rendering/encode.py` | WAV 转 MP3（按峰值统一响度）与成品检查。 |
 | `backend/app/rendering/`、`storage/` | 后续放音频渲染与 SQLite/文件存储。 |
 | `backend/app/worker.py` | 后台任务入口占位，当前不会执行任务。 |
 | `backend/config/`、`app/presets.py` | 预设、风格规则、默认规划及其加载校验。 |

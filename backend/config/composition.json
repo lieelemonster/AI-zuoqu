@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "targetSeconds": 60,
+  "minSeconds": 45,
+  "maxSeconds": 75,
+  "tailSeconds": 1.5,
+  "mp3Bitrate": "192k",
+  "targetPeakDbfs": -1.5
+}

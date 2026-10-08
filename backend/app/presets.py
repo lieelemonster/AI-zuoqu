@@ -127,6 +127,31 @@ class StylesFile(ApiModel):
     styles: list[StyleConfig]
 
 
+class CompositionConfig(ApiModel):
+    """成品时长范围、钢琴尾音预算与编码参数。"""
+
+    version: int
+    target_seconds: float = Field(gt=0)
+    min_seconds: float = Field(gt=0)
+    max_seconds: float = Field(gt=0)
+    tail_seconds: float = Field(ge=0, le=5)
+    mp3_bitrate: str = Field(pattern=r"^\d{2,3}k$")
+    target_peak_dbfs: float = Field(le=0)
+
+    @model_validator(mode="after")
+    def _ordered(self) -> "CompositionConfig":
+        if not self.min_seconds < self.target_seconds < self.max_seconds:
+            raise ValueError("需满足 minSeconds < targetSeconds < maxSeconds")
+        return self
+
+
+@lru_cache
+def load_composition() -> CompositionConfig:
+    return CompositionConfig.model_validate(
+        json.loads((CONFIG_DIR / "composition.json").read_text(encoding="utf-8"))
+    )
+
+
 @lru_cache
 def load_presets() -> Presets:
     return Presets.model_validate(json.loads((CONFIG_DIR / "presets.json").read_text(encoding="utf-8")))
