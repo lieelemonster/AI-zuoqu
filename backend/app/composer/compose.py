@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.composer.accompaniment import generate_accompaniment
 from app.composer.arrangement import Arrangement, arrange
 from app.composer.harmony import chord_timeline
 from app.composer.melody import MelodyContext, generate_melody
@@ -33,6 +34,9 @@ def compose(parsed: ParsedLyrics, plan: MusicPlan, style_id: str, emotion_id: st
         chorus_lift=plan.chorus_lift_semitones,
         velocity_offset=emotion.velocity_offset,
     ))
+    accompaniment = generate_accompaniment(
+        arrangement, timeline, melody_low=style.melody_range[0], velocity_offset=emotion.velocity_offset
+    )
     score = Score(
         bpm=arrangement.bpm,
         key=arrangement.key,
@@ -45,6 +49,9 @@ def compose(parsed: ParsedLyrics, plan: MusicPlan, style_id: str, emotion_id: st
             LyricLine(id=lp.line.id, text=lp.line.text, section_id=s.id)
             for s in arrangement.sections for lp in s.lines
         ],
-        tracks=[{"role": "melody", "program": 0, "notes": melody}],
+        tracks=[
+            {"role": "melody", "program": 0, "notes": melody},
+            {"role": "accompaniment", "program": 0, "notes": accompaniment},
+        ],
     )
     return Composition(score=score, arrangement=arrangement)

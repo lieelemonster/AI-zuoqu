@@ -50,6 +50,7 @@ bash scripts/dev.sh env-check
 | `bash scripts/dev.sh check-lyrics` | 识别 `[主歌]\n夏夜的风\n[副歌]\n一起向前走` 的两个段落和歌词行；缺副歌标题时提示补齐，原文不变。 |
 | `bash scripts/dev.sh check-arrangement` | 24 小节 4/4 100 BPM 输出 57.6 秒乐谱（另计尾音）；短歌词每句后有停顿；过长歌词提示删减且不删词。 |
 | `bash scripts/dev.sh check-melody` | 同输入同种子得到相同音符、换种子不同；音符不越音域；副歌音区高于主歌；生成仅含主旋律的 `runtime/checks/melody_only.wav` 供试听。 |
+| `bash scripts/dev.sh check-demo` | 合成流行和说唱两版完整小样（`runtime/checks/demo_pop.mp3`、`demo_rap.mp3`）；检查伴奏与旋律对齐、旋律比伴奏响、结尾为主和弦自然衰减、时长合格。 |
 | `bash scripts/dev.sh test` | 全部自动测试（pytest）。 |
 
 ## 第一次安装
@@ -127,7 +128,8 @@ worker 当前只打印“Worker 脚手架可用，未接入任务处理。”然
 | `backend/app/lyrics/parser.py` | 歌词段落标题识别、分句与字符映射。 |
 | `backend/app/providers/` | 后续放模型适配。 |
 | `backend/app/composer/arrangement.py`、`rhythm.py` | 段落时长分配与歌词节奏。 |
-| `backend/app/composer/harmony.py`、`melody.py`、`compose.py` | 和弦时间线、主旋律规则与作曲入口。 |
+| `backend/app/composer/harmony.py`、`melody.py`、`accompaniment.py`、`compose.py` | 和弦时间线、主旋律、和弦伴奏与作曲入口。 |
+| `backend/app/rendering/pipeline.py` | 乐谱 → MIDI → WAV → MP3 → 成品检查。 |
 | `backend/app/planner/` | 后续放音乐规划。 |
 | `backend/app/rendering/environment.py` | 音频环境检查（`env-check`）。 |
 | `backend/app/rendering/midi.py` | 乐谱 JSON 导出 MIDI 及读回。 |
