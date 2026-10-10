@@ -81,6 +81,6 @@ def test_mock_plan_is_valid_for_every_style_with_bridge(style):
 
 def test_prompt_lists_only_style_templates_and_structure():
     system, user = build_prompts(INPUT, PARSED)
-    assert "只能从“可用模板”中选择" in system
+    assert "钢琴主旋律与简单伴奏" in system and "output_schema" in system
     assert "pop_chorus_b" in user and "rock_" not in user
-    assert '"lines": 4' in user
+    assert "晚风吹过街角" in user

@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.lyrics.generator import build_prompts
+from app.lyrics.generator import build_prompts, generate_lyrics
 from app.lyrics.parser import parse_lyrics
 from app.main import app
 from app.presets import load_presets
@@ -10,8 +10,18 @@ from app.providers.base import validate_payload
 from app.providers.mock import MockProvider
 from app.schemas.input import CreativeInput
 
-GOOD = "[主歌]\n晚风吹过街角\n你笑着回头\n路灯一盏一盏\n照亮我们的路\n[副歌]\n就这样走下去\n不怕夜太长\n就这样走下去\n心里有光"
-
+GOOD = """[主歌]
+街灯一盏盏退到身后
+你的影子比话更先到
+咖啡凉了你还在搅拌
+勺子碰杯沿轻轻响一下
+想问的话在舌尖停住
+夜色替我们把句子收好
+[副歌]
+你若回头灯就还亮着
+这条街可以走得很慢
+没说完的先寄给晚风
+它明天从窗缝里回来"""
 
 class FakeProvider:
     model_id = "fake"
@@ -19,9 +29,11 @@ class FakeProvider:
     def __init__(self, *responses):
         self.responses = list(responses)
         self.calls = 0
+        self.prompts = []
 
     def complete_json(self, *, purpose, system, user, schema, temperature=0.8):
         self.calls += 1
+        self.prompts.append(user)
         response = self.responses[min(self.calls, len(self.responses)) - 1]
         if isinstance(response, Exception):
             raise response
@@ -29,7 +41,8 @@ class FakeProvider:
 
 
 def payload(text=GOOD, approaches=("story", "emotion", "imagery")):
-    return {"variants": [{"approach": a, "title": "歌名", "text": text} for a in approaches]}
+    types = {"story": "narrative", "emotion": "emotional", "imagery": "imagery"}
+    return {"variants": [{"type": types[a], "title": "歌名", "lyrics": text} for a in approaches]}
 
 
 @pytest.fixture
@@ -59,11 +72,31 @@ def test_mock_returns_three_composable_variants(client, style):
         assert parsed.ok and {s.type for s in parsed.sections} == {"verse", "chorus"}
 
 
-def test_prompt_contains_names_and_story():
+def test_mock_lyrics_for_every_theme_can_be_composed():
+    provider = MockProvider()
+    for theme in load_presets().themes:
+        for style in load_presets().styles:
+            data = CreativeInput(theme_id=theme.id, emotion_id="nostalgic", style_id=style.id, story="老槐树下的夏天")
+            result = generate_lyrics(data, provider)
+            assert [variant.approach for variant in result.variants] == ["story", "emotion", "imagery"]
+            assert all(parse_lyrics(variant.text).ok for variant in result.variants)
+
+
+def test_prompt_is_the_lyrics_brief():
     system, user = build_prompts(CreativeInput(theme_id="hometown", emotion_id="nostalgic", style_id="rap",
                                                story="外婆家门口的老槐树"))
-    assert "story" in system and "imagery" in system and "押韵" in system
+    assert "narrative" in system and "emotional" in system and "imagery" in system
+    assert "只返回合法JSON" in system and "星辰大海" in system
     assert "故乡" in user and "外婆家门口的老槐树" in user
+
+
+def test_missing_chorus_is_retried_once(client):
+    missing = "[主歌]\n晚风吹过街角\n你笑着回头\n路灯一盏一盏\n照亮我们的路"
+    provider = use(FakeProvider(payload(text=missing), payload()))
+    response = client.post("/api/lyrics", json=BODY)
+    assert response.status_code == 200 and provider.calls == 2
+    assert "上一次没有通过检查" in provider.prompts[1]
+    assert "副歌" in provider.prompts[1]
 
 
 def test_bad_structure_is_retried_once(client):

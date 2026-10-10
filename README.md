@@ -62,9 +62,9 @@ bash scripts/dev.sh env-check
 
 ```bash
 MODEL_PROVIDER=openai_compatible
-MODEL_API_URL=https://api.deepseek.com/v1   # 服务商提供的 OpenAI 兼容地址
+MODEL_API_URL=https://api.deepseek.com
 MODEL_API_KEY=你的密钥
-MODEL_NAME=deepseek-chat
+MODEL_NAME=deepseek-flash
 ```
 
 密钥只保存在后端 `.env`（已被 `.gitignore` 排除），不会出现在前端代码、数据库、任务文件或接口响应中。没有密钥时可设置 `MODEL_PROVIDER=mock` 使用离线演示模型：它按固定模板返回示例歌词与默认规划，只用于走通流程；配置真实模型后，模型失败时会直接提示重试，不会改用演示内容。
@@ -77,7 +77,7 @@ MODEL_NAME=deepseek-chat
 | --- | --- |
 | `GET /api/health` | 健康检查。 |
 | `GET /api/presets` | 主题、情绪、风格的 ID 与显示名称，前端据此显示选项。 |
-| `POST /api/lyrics` | 提交 `{themeId, emotionId, styleId, story}`，返回故事叙述、情绪表达、意象表达三版歌词（均含主歌、副歌，篇幅适合约 1 分钟）。模型输出格式不符时自动重试一次。 |
+| `POST /api/lyrics` | 提交 `{themeId, emotionId, styleId, story}`，返回故事叙述、情绪表达、意象表达三版歌词。每版主歌 6 行、副歌 4 行，用具体画面来写、少用口语套话，篇幅仍适合约 1 分钟。模型输出太短或格式不符时自动重写一次。 |
 | `POST /api/music-jobs` | 提交 `{requestId, sourceRevision, input, lyrics, selectedVariantId}`，返回任务 ID 和状态（新任务为 `queued`）。提交时先检查歌词结构与时长；相同 `requestId` 重复提交返回同一任务。每个任务保存当次的歌词与输入快照及随机种子。 |
 | `GET /api/music-jobs/{id}` | 查询任务状态 `queued／running／succeeded／failed`、当前阶段、错误信息，成功后给出音频地址。 |
 | `GET /api/music-jobs/{id}/audio` | 播放 MP3，支持 Range 请求（浏览器拖动进度时只取对应片段）。 |

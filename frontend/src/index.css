@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes pulseBar { from { transform: scaleY(0.6); } to { transform: scaleY(1); } }
+
+button { white-space: nowrap; }
+button p { white-space: normal; }
+
+/* 纸本：浅色宣纸 + 朱红 */
+[data-theme='paper'] {
+  --color-stone-950: #f6f1e7; --color-stone-900: #fffaf0; --color-stone-600: #b5a993;
+  --color-stone-500: #8c806b; --color-stone-400: #6b6050; --color-stone-300: #4a4136;
+  --color-stone-200: #2f2922; --color-stone-100: #1f1a15; --color-white: #3a2a1a;
+  --color-amber-300: #c2412d; --color-amber-200: #a8341f;
+}
+[data-theme='paper'] .bg-amber-300 { color: #fffaf0; }
+[data-theme='paper'] .font-serif { font-family: "Noto Serif SC", "Songti SC", serif; }
+
+/* 霓虹：深蓝紫 + 青色 */
+[data-theme='neon'] {
+  --color-stone-950: #0b0820; --color-stone-900: #151034; --color-stone-600: #4b4580;
+  --color-stone-500: #7a74b0; --color-stone-400: #a29dd0; --color-stone-300: #c9c5ee;
+  --color-amber-300: #5ef0e0; --color-amber-200: #9bfff3;
+}
+[data-theme='neon'] .bg-amber-300 { color: #0b0820; box-shadow: 0 0 24px rgba(94, 240, 224, 0.35); }
+[data-theme='neon'] .font-serif { font-family: system-ui, sans-serif; letter-spacing: -0.02em; }
+
+/* 赛博朋克增强 */
+[data-theme='neon'] {
+  --cy-pink: #ff2bd6;
+  background-color: #0b0820;
+  background-image:
+    linear-gradient(rgba(94, 240, 224, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(94, 240, 224, 0.06) 1px, transparent 1px),
+    radial-gradient(ellipse at 80% 0%, rgba(255, 43, 214, 0.18), transparent 50%),
+    radial-gradient(ellipse at 0% 100%, rgba(94, 240, 224, 0.12), transparent 50%);
+  background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%;
+  background-attachment: fixed;
+}
+[data-theme='neon']::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 60;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px);
+}
+[data-theme='neon'] h1, [data-theme='neon'] h2 {
+  text-shadow: 2px 0 var(--cy-pink), -2px 0 #5ef0e0;
+}
+[data-theme='neon'] .rounded-2xl, [data-theme='neon'] .rounded-xl {
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+[data-theme='neon'] .border-amber-300 { border-color: var(--cy-pink); box-shadow: inset 0 0 20px rgba(255, 43, 214, 0.25); }
+[data-theme='neon'] .bg-amber-300\/10 { background-color: rgba(255, 43, 214, 0.1); }
+[data-theme='neon'] button.bg-amber-300 { border-radius: 0; text-transform: uppercase; letter-spacing: 0.15em; }
+[data-theme='neon'] button:hover.border-white\/10, [data-theme='neon'] .hover\:border-amber-300:hover { border-color: var(--cy-pink); }
+[data-theme='neon'] .font-mono, [data-theme='neon'] .cy-back, [data-theme='neon'] .text-xs { font-family: ui-monospace, "JetBrains Mono", monospace; }
+
+/* 左上角品牌区 */
+.cy-logo { border-radius: 0.5rem; }
+[data-theme='neon'] .cy-logo {
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+[data-theme='neon'] .cy-sub { font-family: inherit; letter-spacing: 0.05em; }
+
+[data-theme='neon'] .opt-card:hover { border-color: var(--cy-pink); }
+
+@keyframes caretBlink { 50% { opacity: 0; } }
+.caret { animation: caretBlink 1s steps(1) infinite; }
+.mode-tag { animation: fadeIn 0.35s ease; }
+[data-theme='neon'] .mode-tag {
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  box-shadow: inset 0 0 12px rgba(94, 240, 224, 0.25);
+  text-shadow: 0 0 8px rgba(94, 240, 224, 0.6);
+}

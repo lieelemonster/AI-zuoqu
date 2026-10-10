@@ -11,8 +11,7 @@ from pydantic import ConfigDict, Field, ValidationError
 from app.composer.arrangement import LyricsLengthError, arrange
 from app.lyrics.parser import ParsedLyrics
 from app.planner import mock_plan  # noqa: F401  注册离线演示模型的规划用途
-from app.presets import (default_plan, get_emotion_rule, get_style, load_composition, load_presets,
-                         plan_errors)
+from app.presets import default_plan, get_style, load_composition, load_presets, plan_errors
 from app.providers import ProviderError, TextModelProvider
 from app.schemas.base import ApiModel, format_validation_error
 from app.schemas.input import CreativeInput
@@ -20,7 +19,7 @@ from app.schemas.plan import Key, Mode, MusicPlan, SectionType
 
 logger = logging.getLogger(__name__)
 
-PROMPT_VERSION = "plan-1"
+PROMPT_VERSION = "plan-2"
 MIN_MELODY_SPAN = 12
 PlanSource = Literal["ai", "ai_repaired", "default"]
 
@@ -75,30 +74,95 @@ def allowed_templates(style_id: str) -> dict:
     }
 
 
+SYSTEM_PROMPT = """你是中文歌曲钢琴小样的音乐规划协作者。
+根据用户最终确认的歌词、音乐风格和情绪，制定后端能够执行的音乐规划。
+
+目标成品为45～75秒的钢琴主旋律与简单伴奏，无人声。
+创作流程是先写词，再让旋律适配歌词。
+
+【创作原则】
+歌词偏向诗意、画面感强、适度含蓄。
+音乐应承接歌词情绪，保留呼吸和留白。
+不要因为歌词诗意，就固定选择悲伤、慢速或小调。
+
+【歌词适配】
+保留全部歌词，不删字、改字或改变顺序。
+根据词组、语义重心、自然停顿和句尾韵脚规划乐句。
+避免在完整词语中间安排明显的换气停顿。
+不要仅按字数为所有字平均分配时值。
+长句采用允许范围内更密的节奏或更多小节；
+短句通过句尾延长、休止或旋律回应保留空间。
+主旋律应能供人自然试唱。
+
+【旋律与段落】
+主歌建立一个简洁、可辨识的旋律动机。
+旋律变化围绕动机展开，兼顾重复与变奏。
+副歌与主歌保持联系，同时在音区、节奏、
+动机展开或力度中形成可辨识的变化。
+副歌核心句应成为旋律记忆点。
+不要机械地让每首副歌都更高、更响、更密；
+克制或释然的情绪可以通过收束和留白表达。
+遵守指定音域和音程限制，避免无目的的大幅跳进。
+
+【和声与伴奏】
+根据风格和情绪选择已有的和弦方案。
+伴奏应为旋律留出音区、力度和节奏空间。
+不要每拍都填满，不让伴奏掩盖主旋律。
+重要乐句落点应有和声支撑。
+说唱风格以节奏组织和简洁动机为主。
+
+【时长与结尾】
+根据速度、拍号、小节数和尾音共同规划时长。
+段落小节数合计必须符合总小节预算。
+为最后一个音或和弦保留自然衰减时间。
+选择完整的收束方式，不依赖截断音频满足时长。
+歌词无法在约束内适配时，由后端返回明确提示，
+不得通过删词或越过参数上限假装完成。
+
+【执行约束】
+只使用服务端提供的模板、和弦方案和节奏模式。
+所有参数必须在服务端允许的范围内。
+只输出已有schema支持的字段，不新增字段。
+上述音乐建议通过后端已支持的参数表达。
+
+【输出】
+输出前检查模板合法性、参数范围、歌词覆盖、
+段落预算、主副歌变化和包含尾音的预计时长。
+只返回符合output_schema的合法JSON。
+不输出解释、Markdown、检查过程或自评分。"""
+
+
 def build_prompts(data: CreativeInput, parsed: ParsedLyrics) -> tuple[str, str]:
     presets = load_presets()
     name = lambda options, value: next(o.name for o in options if o.id == value)  # noqa: E731
-    emotion = get_emotion_rule(data.emotion_id)
-    system = """你是作曲编排助手。根据歌词结构、主题、情绪和风格，为一段约 1 分钟的钢琴旋律与伴奏小样做简短的音乐规划，只输出 JSON。
-规则：
-1. chordPatternId 和 rhythmPatternId 只能从“可用模板”中选择，并且模板的 for 列表必须包含该段落的 type。
-2. bpm 在 bpmRange 内；mode 在 modes 内；key 为 C、C#、D、Eb、E、F、F#、G、Ab、A、Bb、B 之一；melodyRange 为 [最低音, 最高音] 的 MIDI 音高，在给定范围内且至少相差 12。
-3. sections 按顺序为：intro（1～4 小节）、歌词中的各段（verse／chorus／bridge，顺序与歌词一致）、outro（2～4 小节）。歌词段小节数按行数估计，每行约 2 小节。
-4. chorusLiftSemitones 为副歌比主歌升高的半音数，0～chorusLiftMax。情绪越激昂、明亮，速度和副歌升高可以越多；忧伤、怀念则速度偏慢、多用小调。
-输出格式：{"bpm": 96, "key": "C", "mode": "major", "melodyRange": [60, 79], "chorusLiftSemitones": 2, "sections": [{"type": "intro", "bars": 2, "chordPatternId": "...", "rhythmPatternId": "..."}, ...]}"""
+    limits = allowed_templates(data.style_id)
     info = {
         "styleId": data.style_id,
         "emotionId": data.emotion_id,
         "主题": name(presets.themes, data.theme_id),
         "情绪": name(presets.emotions, data.emotion_id),
-        "风格": name(presets.styles, data.style_id),
-        "情绪建议": {"mode": emotion.mode, "bpmOffset": emotion.bpm_offset, "chorusLift": emotion.chorus_lift},
-        "歌词结构": [{"type": s.type, "lines": len(s.lines)} for s in parsed.sections],
+        "音乐风格": name(presets.styles, data.style_id),
+        "拍号": [4, 4],
+        "歌词": [{"type": section.type, "lines": [line.text for line in section.lines]} for section in parsed.sections],
+    }
+    output_schema = {
+        "bpm": f"整数，必须在 {limits['bpmRange']} 内",
+        "key": "C、C#、D、Eb、E、F、F#、G、Ab、A、Bb、B 之一，优先使用 defaultKeys",
+        "mode": "必须是 modes 中的一项",
+        "melodyRange": "长度为 2 的数组 [最低音, 最高音]，MIDI 音高，落在允许的 melodyRange 内，且至少相差 12",
+        "chorusLiftSemitones": f"副歌相对主歌升高的半音数，0 到 {limits['chorusLiftMax']}。可以为 0，用留白或节奏形成副歌",
+        "sections": [{
+            "type": "intro、verse、chorus、bridge 或 outro",
+            "bars": "该段小节数。顺序为 intro（1～4）、与歌词一致的各段、outro（2～4）。歌词段按行数估计，长句可以更多小节",
+            "chordPatternId": "只能用可用模板里的 id，且该模板的 for 必须包含本段 type",
+            "rhythmPatternId": "只能用可用模板里的 id，且该模板的 for 必须包含本段 type",
+        }],
     }
     user = (f"创作信息（JSON）：{json.dumps(info, ensure_ascii=False)}\n"
-            f"可用模板（JSON）：{json.dumps(allowed_templates(data.style_id), ensure_ascii=False)}\n"
-            "请给出音乐规划。")
-    return system, user
+            f"可用模板（JSON）：{json.dumps(limits, ensure_ascii=False)}\n"
+            f"output_schema（JSON）：{json.dumps(output_schema, ensure_ascii=False)}\n"
+            "请只返回符合 output_schema 的 JSON。")
+    return SYSTEM_PROMPT, user
 
 
 def validate_plan(output: _ModelPlan, data: CreativeInput, parsed: ParsedLyrics, seed: int) -> tuple[MusicPlan | None, list[str]]:
